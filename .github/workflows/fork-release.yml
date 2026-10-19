@@ -210,21 +210,21 @@ jobs:
           fetch-depth: 1
       - uses: actions/download-artifact@v4
         with:
-          path: assets
+          path: release-files
           merge-multiple: true
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.version.outputs.tag }}
         run: |
-          ls -la assets
+          ls -la release-files
           notes="release-notes/$TAG.md"
           if [ -f "$notes" ]; then args=(--notes-file "$notes"); else args=(--generate-notes); fi
           publish() {
             if gh release view "$TAG" >/dev/null 2>&1; then
-              gh release upload "$TAG" assets/* --clobber
+              gh release upload "$TAG" release-files/* --clobber
             else
-              gh release create "$TAG" assets/* --target "$GITHUB_SHA" --title "PhotoCraft ${TAG#fork-v} (fork)" --prerelease "${args[@]}"
+              gh release create "$TAG" release-files/* --target "$GITHUB_SHA" --title "PhotoCraft ${TAG#fork-v} (fork)" --prerelease "${args[@]}"
             fi
           }
           if ! publish > publish.log 2>&1; then
