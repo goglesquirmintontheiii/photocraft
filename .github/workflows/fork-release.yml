@@ -96,7 +96,8 @@ jobs:
           if [ "${{ steps.fonts.outcome }}" = "success" ]; then
             export CRAFT_FONTS_DIR="$GITHUB_WORKSPACE/craft-fonts"
           fi
-          packaging/linux/package.sh --formats appimage
+          set -o pipefail
+          packaging/linux/package.sh --formats appimage 2>&1 | tee build.log || { python3 .github/scripts/annotate-errors.py build.log "Linux build"; exit 1; }
 
       - name: Smoke-test the AppImage
         run: |
@@ -150,8 +151,8 @@ jobs:
           $env:PHOTOCRAFT_BUILD_DATE = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd')
           $env:PHOTOCRAFT_BUILD_SHA = $env:GITHUB_SHA
           if ('${{ steps.fonts.outcome }}' -eq 'success') { $env:CRAFT_FONTS_DIR = Join-Path $env:GITHUB_WORKSPACE 'craft-fonts' }
-          cargo build --release --locked -p photocraft -p photocraft-cli --features "heif,photocraft/ai-directml" --target x86_64-pc-windows-msvc
-          if ($LASTEXITCODE -ne 0) { throw "cargo build failed" }
+          cargo build --release --locked -p photocraft -p photocraft-cli --features "heif,photocraft/ai-directml" --target x86_64-pc-windows-msvc 2>&1 | Tee-Object -FilePath build.log
+          if ($LASTEXITCODE -ne 0) { python .github/scripts/annotate-errors.py build.log "Windows build"; throw "cargo build failed" }
 
       - name: Package
         shell: pwsh
