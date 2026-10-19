@@ -286,6 +286,10 @@ pub struct Interface {
     /// own one-row title bar (tiling window managers, desktops that draw their own decorations;
     /// #1271, #1316). Read when the app starts. macOS always uses the system's.
     pub system_title_bar: bool,
+    /// Show the active document's file name in the title bar and the OS window title. The tabs
+    /// already name the file, so this can be turned off for a plain "PhotoCraft" title (#5037).
+    /// The unsaved-changes mark stays either way.
+    pub show_file_name_in_title: bool,
     /// Notices (the lower-right cards) hide themselves after
     /// [`Interface::notification_duration_seconds`] unless the pointer rests on them (#2022).
     pub notification_auto_hide: bool,
@@ -317,6 +321,7 @@ impl Default for Interface {
             enable_animations: true,
             show_bounding_box_when_dragging_layer: false,
             system_title_bar: false,
+            show_file_name_in_title: true,
             notification_auto_hide: true,
             notification_duration_seconds: 6,
         }

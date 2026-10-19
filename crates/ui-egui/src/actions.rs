@@ -824,16 +824,28 @@ pub fn panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
                     app.ui.actions.expanded[i] = !expanded;
                 }
             }
-            resp.context_menu(|ui| {
+            // Clicks inside stay open, so Shift and Command can both be ticked; every item that
+            // finishes closes the menu itself.
+            egui::Popup::context_menu(&resp).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside).show(|ui| {
                 ui.label(tl!("Keyboard Shortcuts"));
                 let current = app.session.prefs().shortcuts.get(&shortcut_id(name)).cloned().unwrap_or_default();
-                for key in std::iter::once(String::new()).chain((1..=12).map(|n| format!("F{n}"))) {
-                    let label = if key.is_empty() { tl!("None").to_string() } else { key.clone() };
-                    if ui.selectable_label(current == key, label).clicked() {
-                        let _ = assign_shortcut(app, name, &key);
+                // Photoshop's Action Options: a function key, with Shift and Command (#7646).
+                let (key, mut shift, mut command) = photocraft_engine::atn_cmds::parse_function_key(&current).unwrap_or((0, false, false));
+                for n in std::iter::once(0).chain(1..=12) {
+                    let label = if n == 0 { tl!("None").to_string() } else { format!("F{n}") };
+                    if ui.selectable_label(key == n, label).clicked() {
+                        let chosen = if n == 0 { String::new() } else { photocraft_engine::atn_cmds::function_key_name(n, shift, command) };
+                        let _ = assign_shortcut(app, name, &chosen);
                         ui.close();
                     }
                 }
+                ui.add_enabled_ui(key > 0, |ui| {
+                    let command_label = if cfg!(target_os = "macos") { tl!("Command") } else { tl!("Ctrl") };
+                    let toggled = ui.checkbox(&mut shift, tl!("Shift")).changed() | ui.checkbox(&mut command, command_label).changed();
+                    if toggled {
+                        let _ = assign_shortcut(app, name, &photocraft_engine::atn_cmds::function_key_name(key, shift, command));
+                    }
+                });
                 ui.separator();
                 ui.menu_button(tl!("Color"), |ui| {
                     for (id, label) in [
@@ -1032,6 +1044,44 @@ mod tests {
         };
         assert!(bottom(700.0) - bottom(300.0) > 350.0, "list uses the additional panel height instead of stopping at 320 px");
         assert!(crate::dock::Group::History.scrolls_itself(1));
+    }
+
+    /// #7646: an action's function key can take Shift and Command, as in Photoshop's Action
+    /// Options, and only that combination plays it.
+    #[test]
+    fn a_function_key_with_shift_and_command_plays_its_action() {
+        use egui::{Event, Key, Modifiers};
+        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
+        app.session.actions.list.push(Action {
+            name: "Action 1".into(),
+            steps: vec![("layer.new.layer".into(), json!({}))],
+            disabled: Default::default(),
+            ..Default::default()
+        });
+        let key = photocraft_engine::atn_cmds::function_key_name(2, true, true);
+        assert_eq!(key, "Cmd+Shift+F2");
+        assign_shortcut(&mut app, "Action 1", &key).unwrap();
+        let ctx = egui::Context::default();
+        let press = |app: &mut PhotocraftApp, modifiers| {
+            ctx.begin_pass(egui::RawInput {
+                events: vec![
+                    Event::ModifiersChanged(modifiers),
+                    Event::Key { key: Key::F2, physical_key: None, pressed: true, repeat: false, modifiers },
+                    Event::Key { key: Key::F2, physical_key: None, pressed: false, repeat: false, modifiers },
+                ],
+                ..Default::default()
+            });
+            crate::shortcuts::handle(app, &ctx);
+            ctx.end_pass().textures_delta.clear();
+        };
+        let layers = |app: &PhotocraftApp| app.session.active().unwrap().doc.layers.len();
+        let before = layers(&app);
+        press(&mut app, Modifiers::NONE);
+        press(&mut app, Modifiers::SHIFT);
+        assert_eq!(layers(&app), before, "F2 and Shift+F2 alone don't play it");
+        press(&mut app, Modifiers::SHIFT | Modifiers::COMMAND);
+        assert_eq!(layers(&app), before + 1, "Cmd+Shift+F2 plays it");
     }
 
     #[test]

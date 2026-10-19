@@ -1002,6 +1002,7 @@ fn tool_id(t: Tool) -> String {
 
 /// Apply a tool preset: the engine sets the brush/colour, the shell switches tool and options.
 pub fn select_tool_preset(app: &mut PhotocraftApp, name: &str) {
+    let before_ratio = crate::crop_ui::preset_ratio(app);
     let Some(r) = run(app, "tool.presets.select", json!({"preset": name})) else { return };
     if let Some(tool) = r["tool"].as_str().and_then(Tool::from_name) {
         crate::tool_memory::select(app, tool);
@@ -1022,6 +1023,10 @@ pub fn select_tool_preset(app: &mut PhotocraftApp, name: &str) {
         if let Ok(opts) = serde_json::from_value(cur) {
             app.ui.tool_options = opts;
         }
+    }
+    // As the options bar does: a crop preset's ratio (or W x H) fits the frame at once.
+    if crate::crop_ui::preset_ratio(app) != before_ratio {
+        crate::crop_ui::apply_ratio(app);
     }
 }
 
@@ -1317,6 +1322,20 @@ mod tests {
         assert_eq!(tool_id(Tool::CloneStamp), "cloneStamp");
         assert_eq!(tool_id(Tool::PatternStamp), "patternStamp");
         assert_eq!(Tool::from_name(&tool_id(Tool::CustomShape)), Some(Tool::CustomShape));
+    }
+
+    /// A crop preset picked in Tool Presets fits the frame to its ratio at once, as the options
+    /// bar's dropdown does.
+    #[test]
+    fn a_crop_tool_preset_fits_the_frame_to_its_ratio() {
+        let (mut app, _) = app();
+        app.ui.tool = Tool::Crop;
+        crate::crop_ui::ensure_frame(&mut app);
+        assert_eq!(app.ui.crop_rect, Some([0.0, 0.0, 64.0, 48.0]));
+        app.run("tool.presets.new", json!({"name": "Square", "tool": "crop", "options": {"toolOptions": {"crop_ratio": "1:1"}}})).unwrap();
+        select_tool_preset(&mut app, "Square");
+        assert_eq!(app.ui.tool_options.crop_ratio, "1:1");
+        assert_eq!(app.ui.crop_rect, Some([8.0, 0.0, 56.0, 48.0]));
     }
 
     /// #7356: a preset made with + keeps only its own tool's options, so choosing it doesn't

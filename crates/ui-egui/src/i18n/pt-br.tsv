@@ -3994,6 +3994,7 @@ layerLabel	No Color	Sem cor
 	There are too many sets: delete one first.	Há conjuntos demais: exclua um primeiro.
 	set name	nome do conjunto
 	{set} (modified)	{set} (modificado)
+	Show file name in title	Exibir nome do arquivo no título
 	Accept and Go to Conflict	Aceitar e ir para o conflito
 	Changes undone.	Alterações desfeitas.
 	Choose a new shortcut for this command, or leave it without one.	Escolha um novo atalho para este comando ou deixe-o sem atalho.
@@ -4020,6 +4021,9 @@ layerLabel	No Color	Sem cor
 	Increase Brush Size	Aumentar tamanho do pincel
 	Decrease Brush Hardness	Diminuir dureza do pincel
 	Increase Brush Hardness	Aumentar dureza do pincel
+	Use	Usar
+	In Front	Na frente
+	Behind	Atrás
 
 # Edit › Preferences › AI: local AI models
 	AI	IA

@@ -732,6 +732,7 @@ impl Session {
         // action it plays (a script step) must not flush the steps it ran so far into the action
         // being recorded, nor move the recording mark past the entries it is about to replace.
         let recording = if spec.journal && crate::actions_cmds::replayable(id) { self.actions.recording.take() } else { None };
+        let before = self.active().map(|st| st.doc.clone());
         // Last-resort guard (AGENTS.md, Never crash): a command that panics anyway fails with an
         // error instead of taking the app down. `edit` only commits a document after its closure
         // returns, so the documents are unchanged.
@@ -759,9 +760,25 @@ impl Session {
                 Ok(Started::Job(jid))
             }
             (Ok(v), None) => {
+                if let Some(before) = before {
+                    self.add_relayout_damage(&before);
+                }
                 self.after_command(id, params, spec.journal, Some(nested_from));
                 Ok(Started::Done(v))
             }
+        }
+    }
+
+    /// Grows the damage a command reported for the pixels it changed by what effects laid out
+    /// over a layer's frame repaint when it moved ([`photocraft_compose::relayout_damage`]): a
+    /// stroke on a layer with a Gradient Overlay reports the stroke, but the gradient is laid out
+    /// again over the whole grown layer (#4053). `before` is the active document before.
+    fn add_relayout_damage(&mut self, before: &Arc<Document>) {
+        let Some(st) = self.active_mut().filter(|st| st.doc.id == before.id && !Arc::ptr_eq(&st.doc, before)) else { return };
+        let Some(d) = st.last_damage.filter(|d| !d.is_empty()) else { return };
+        let extra = photocraft_compose::relayout_damage(before, &st.doc);
+        if !extra.is_empty() {
+            st.last_damage = Some(d.union(&extra));
         }
     }
 

@@ -2826,6 +2826,7 @@ curves	Smooth	平滑
 	set name	组名称
 	{set} (modified)	{set}（已修改）
 	Random	随机
+	Show file name in title	标题中显示文件名
 	Accept and Go to Conflict	接受并转到冲突
 	Changes undone.	已撤消更改。
 	Choose a new shortcut for this command, or leave it without one.	为此命令选择新的快捷键，或保留为无快捷键。
@@ -2853,6 +2854,10 @@ curves	Smooth	平滑
 	Increase Brush Size	增大画笔大小
 	Decrease Brush Hardness	减小画笔硬度
 	Increase Brush Hardness	增大画笔硬度
+	Use	使用
+	In Front	前面
+	Behind	后面
+	Blend	混合
 
 # Edit › Preferences › AI: local AI models
 	AI	AI

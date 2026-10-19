@@ -37,6 +37,25 @@ pub fn has_effects(layer: &Layer) -> bool {
     layer.effects.enabled && layer.effects.items.iter().any(Effect::enabled)
 }
 
+/// Whether an enabled effect is laid out over the layer's frame ([`crate::effects_frame`]), so
+/// growing or shrinking the layer repaints it everywhere, not only where its pixels changed: a
+/// Gradient Overlay, a gradient stroke (its frame is the shape's extent), and patterns linked with
+/// the layer without an effects reference point (overlays, pattern strokes and glows, and bevel
+/// textures tile from the frame's top-left).
+pub fn spans_frame(layer: &Layer) -> bool {
+    let unanchored = layer.effects.reference.is_none();
+    let pattern = |p: &FxPaint| unanchored && matches!(p, FxPaint::Pattern { .. });
+    has_effects(layer)
+        && layer.effects.items.iter().filter(|e| e.enabled()).any(|e| match e {
+            Effect::GradientOverlay { .. } => true,
+            Effect::PatternOverlay { link, .. } => *link && unanchored,
+            Effect::Stroke(s) => matches!(s.paint, FxPaint::Gradient(_)) || pattern(&s.paint),
+            Effect::OuterGlow(g) | Effect::InnerGlow(g) => pattern(&g.paint),
+            Effect::BevelEmboss(b) => unanchored && b.texture.as_ref().is_some_and(|t| t.link),
+            _ => false,
+        })
+}
+
 /// Pixels an effect stack can reach beyond the layer's shape.
 pub fn margin(layer: &Layer) -> i32 {
     let mut m = 0.0f32;

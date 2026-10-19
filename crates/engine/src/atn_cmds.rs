@@ -922,7 +922,10 @@ const STROKE_LOCATION: &[(&str, &str)] = &[("Insd", "inside"), ("Cntr", "center"
 const INTENT: &[(&str, &str)] = &[("Img ", "perceptual"), ("Clrm", "relative"), ("Grp ", "saturation"), ("AbsC", "absolute")];
 const PROFILES: &[(&str, &str)] =
     &[("sRGB IEC61966-2.1", "srgb"), ("Display P3", "display-p3"), ("Adobe RGB (1998)", "adobe-rgb-compat"), ("ProPhoto RGB", "prophoto-compat")];
-const SMART_BLUR_QUALITY: &[(&str, &str)] = &[("Hgh ", "high"), ("Mdm ", "medium"), ("Low ", "low")];
+/// Smart Blur quality. Photoshop's codes come first, so they are what an export writes (measured in
+/// Photoshop: `Hgh `/`Mdm `/`Low ` play back as its fallback, low quality). The old codes after
+/// them still read, for actions PhotoCraft wrote before.
+const SMART_BLUR_QUALITY: &[(&str, &str)] = &[("SBQL", "low"), ("SBQM", "medium"), ("SBQH", "high"), ("Hgh ", "high"), ("Mdm ", "medium"), ("Low ", "low")];
 const SMART_BLUR_MODE: &[(&str, &str)] = &[("SBMN", "normal"), ("SBME", "edgeOnly"), ("SBMO", "overlayEdge")];
 const RADIAL_METHOD: &[(&str, &str)] = &[("Spn ", "spin"), ("Zm  ", "zoom")];
 const RADIAL_QUALITY: &[(&str, &str)] = &[("Drft", "draft"), ("Gd  ", "good"), ("Bst ", "best")];
@@ -2372,6 +2375,52 @@ fn image_size_from(d: &Descriptor) -> Mapped {
     step("image.imageSize", Value::Object(p))
 }
 
+/// Shadows/Highlights (`adaptCorrect`, #5830): the shadow and highlight tones are `shadowMode`
+/// and `highlightMode` objects (amount and width in %, radius in px), then the black and white
+/// clips (%), midtone contrast (`center`) and colour correction. Each key is read as its char ID
+/// or its string ID, whichever the file used; absent keys keep the command's defaults.
+const SHADOWS_HIGHLIGHTS_TONES: [(&str, &str, &str); 2] = [("sdwM", "shadowMode", "shadow"), ("hglM", "highlightMode", "highlight")];
+const SHADOWS_HIGHLIGHTS_TONE: [(&str, &str, &str); 3] = [("Amnt", "amount", "Amount"), ("Wdth", "width", "Tone"), ("Rds ", "radius", "Radius")];
+const SHADOWS_HIGHLIGHTS: [(&str, &str, &str); 4] =
+    [("BlcC", "blackClip", "blackClip"), ("WhtC", "whiteClip", "whiteClip"), ("Cntr", "center", "midtone"), ("ClrC", "colorCorrection", "color")];
+
+fn shadows_highlights_from(d: &Descriptor) -> Mapped {
+    let mut m = Map::new();
+    for (code, name, prefix) in SHADOWS_HIGHLIGHTS_TONES {
+        let Some(t) = get_obj(d, code).or_else(|| get_obj(d, name)) else { continue };
+        for (code, name, suffix) in SHADOWS_HIGHLIGHTS_TONE {
+            if let Some(v) = get_num(t, code).or_else(|| get_num(t, name)) {
+                m.insert(format!("{prefix}{suffix}"), Value::from(v));
+            }
+        }
+    }
+    for (code, name, param) in SHADOWS_HIGHLIGHTS {
+        if let Some(v) = get_num(d, code).or_else(|| get_num(d, name)) {
+            m.insert(param.into(), Value::from(v));
+        }
+    }
+    step("image.adjustments.shadowsHighlights", Value::Object(m))
+}
+
+fn shadows_highlights_to(_: &str, p: &Value) -> Option<Descriptor> {
+    let mut d = desc("null");
+    for (_, name, prefix) in SHADOWS_HIGHLIGHTS_TONES {
+        let mut t = desc("adaptCorrectTones");
+        for (_, key, suffix) in SHADOWS_HIGHLIGHTS_TONE {
+            if let Some(v) = jnum(p, &format!("{prefix}{suffix}")) {
+                t = t.with(key, if suffix == "Radius" { long(v) } else { pct(v) });
+            }
+        }
+        d = d.with(name, D::Descriptor(t));
+    }
+    for (_, key, param) in SHADOWS_HIGHLIGHTS {
+        if let Some(v) = jnum(p, param) {
+            d = d.with(key, if matches!(param, "midtone" | "color") { long(v) } else { D::Double(v) });
+        }
+    }
+    Some(d)
+}
+
 fn image_size_to(_: &str, p: &Value) -> Option<Descriptor> {
     let mut d = desc("null");
     if let Some(pc) = jnum(p, "percent") {
@@ -2661,6 +2710,14 @@ const EVENTS: &[Event] = &[
     ev!("Crst", "crystallize", "Crystallize", "filter.pixelate.crystallize", &[F("ClSz", "cellSize", Kind::Long)]),
     Event { code: "GEfc", name: "filterGallery", label: "Filter Gallery", ids: GALLERY_IDS, from: gallery_from, to: gallery_to },
     // Adjustments (Image › Adjustments).
+    Event {
+        code: "",
+        name: "adaptCorrect",
+        label: "Shadows/Highlights",
+        ids: &["image.adjustments.shadowsHighlights"],
+        from: shadows_highlights_from,
+        to: shadows_highlights_to,
+    },
     Event {
         code: "Lvls",
         name: "levels",
@@ -3066,8 +3123,8 @@ pub fn import(bytes: &[u8]) -> std::result::Result<Imported, String> {
     let mut out = Imported { set: set.clone(), warnings: file.warnings.clone(), ..Default::default() };
     for a in &file.actions {
         let action = convert_action(a, &set, &mut out.unsupported);
-        if a.function_key > 0 && !a.shift && !a.command {
-            out.function_keys.push((action.name.clone(), format!("F{}", a.function_key)));
+        if a.function_key > 0 {
+            out.function_keys.push((action.name.clone(), function_key_name(a.function_key, a.shift, a.command)));
         }
         out.actions.push(action);
     }
@@ -3106,8 +3163,32 @@ fn export_item(id: &str, params: &Value, set: &str) -> Option<AtnItem> {
     Some(AtnItem { event, dictionary: e.label.to_string(), descriptor: Some(descriptor), ..Default::default() })
 }
 
+/// An action's key as a shortcut string: `F5`, with Photoshop's Shift and Command options
+/// `Shift+F5`, `Cmd+F5` or `Cmd+Shift+F5` (#7646).
+pub fn function_key_name(key: u16, shift: bool, command: bool) -> String {
+    format!("{}{}F{key}", if command { "Cmd+" } else { "" }, if shift { "Shift+" } else { "" })
+}
+
+/// The `.atn` function key (1…15), Shift and Command of a shortcut string, or `None` for
+/// anything else.
+pub fn parse_function_key(key: &str) -> Option<(u16, bool, bool)> {
+    let (mut shift, mut command) = (false, false);
+    let mut rest = key;
+    loop {
+        if let Some(r) = rest.strip_prefix("Cmd+").filter(|_| !command) {
+            (command, rest) = (true, r);
+        } else if let Some(r) = rest.strip_prefix("Shift+").filter(|_| !shift) {
+            (shift, rest) = (true, r);
+        } else {
+            break;
+        }
+    }
+    let n = rest.strip_prefix('F')?.parse::<u16>().ok().filter(|n| (1..=15).contains(n))?;
+    Some((n, shift, command))
+}
+
 /// The `.atn` bytes of `actions` as the set `set`. `function_keys` gives each action's key
-/// (`F1`…`F15`). Steps with no Photoshop equivalent are an error unless `skip_unsupported`.
+/// (`F1`…`F15`, with `Shift+` and `Cmd+` as [`function_key_name`] writes them). Steps with no Photoshop equivalent are an error unless `skip_unsupported`.
 pub fn export(
     set: &str,
     actions: &[&Action],
@@ -3118,11 +3199,8 @@ pub fn export(
     let mut file = AtnFile { name: UnicodeString::new_nul(set), expanded: true, actions: Vec::new(), warnings: Vec::new() };
     for a in actions {
         let mut out = AtnAction { name: UnicodeString::new_nul(&a.name), expanded: false, ..Default::default() };
-        if let Some((_, key)) = function_keys.iter().find(|(n, _)| n == &a.name)
-            && let Some(n) = key.strip_prefix('F').and_then(|n| n.parse::<u16>().ok())
-            && (1..=15).contains(&n)
-        {
-            out.function_key = n;
+        if let Some((n, shift, command)) = function_keys.iter().find(|(n, _)| n == &a.name).and_then(|(_, key)| parse_function_key(key)) {
+            (out.function_key, out.shift, out.command) = (n, shift, command);
         }
         for (i, (id, params)) in a.steps.iter().enumerate() {
             let Some(mut item) = export_item(id, params, set) else {
@@ -3227,6 +3305,7 @@ fn load(s: &mut Session, p: &Value) -> Result<Value> {
 
 fn save(s: &mut Session, p: &Value) -> Result<Value> {
     let cmd = "actions.save";
+    crate::actions_cmds::flush_recording(s)?;
     let skip = match p.get("skipUnsupported") {
         None | Some(Value::Null) => false,
         Some(Value::Bool(b)) => *b,

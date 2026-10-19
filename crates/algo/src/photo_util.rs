@@ -183,15 +183,7 @@ pub(crate) fn hash01(x: i64, y: i64, seed: u64) -> f32 {
     (z >> 40) as f32 / (1u64 << 24) as f32
 }
 
-/// sRGB transfer function, decode (extended linearly below 0 and as a power above 1).
-pub(crate) fn srgb_to_linear(v: f32) -> f32 {
-    if v <= 0.04045 { v / 12.92 } else { ((v + 0.055) / 1.055).powf(2.4) }
-}
-
-/// sRGB transfer function, encode.
-pub(crate) fn linear_to_srgb(v: f32) -> f32 {
-    if v <= 0.003_130_8 { v * 12.92 } else { 1.055 * v.powf(1.0 / 2.4) - 0.055 }
-}
+pub(crate) use photocraft_color::convert::{linear_to_srgb, srgb_to_linear};
 
 /// Bilinear sample of channel `c` of a `w × h × ch` buffer, clamped to the edges.
 pub(crate) fn bilinear(buf: &[f32], w: usize, h: usize, ch: usize, c: usize, x: f32, y: f32) -> f32 {
@@ -216,6 +208,18 @@ pub(crate) fn catmull_rom(t: f32) -> [f32; 4] {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The shared sRGB functions match the removed copies bit for bit.
+    #[test]
+    fn srgb_transfer_output_is_unchanged() {
+        let decode = |v: f32| if v <= 0.04045 { v / 12.92 } else { ((v + 0.055) / 1.055).powf(2.4) };
+        let encode = |v: f32| if v <= 0.003_130_8 { v * 12.92 } else { 1.055 * v.powf(1.0 / 2.4) - 0.055 };
+        for i in -2000..=6000 {
+            let v = i as f32 / 4000.0;
+            assert_eq!(srgb_to_linear(v).to_bits(), decode(v).to_bits(), "decode {v}");
+            assert_eq!(linear_to_srgb(v).to_bits(), encode(v).to_bits(), "encode {v}");
+        }
+    }
 
     #[test]
     fn dense_and_sparse_solvers_agree() {

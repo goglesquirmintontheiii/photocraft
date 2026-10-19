@@ -3812,6 +3812,7 @@ navigator	Zoom	Zvětšení
 	There are too many sets: delete one first.	Sad je příliš mnoho: nejprve jednu smažte.
 	set name	název sady
 	{set} (modified)	{set} (změněno)
+	Show file name in title	Zobrazit název souboru v titulu
 	Accept and Go to Conflict	Přijmout a přejít ke konfliktu
 	Changes undone.	Změny vráceny.
 	Choose a new shortcut for this command, or leave it without one.	Zvolte pro tento příkaz novou zkratku, nebo ho nechte bez ní.
@@ -3838,6 +3839,9 @@ navigator	Zoom	Zvětšení
 	Increase Brush Size	Zvětšit velikost štětce
 	Decrease Brush Hardness	Snížit tvrdost štětce
 	Increase Brush Hardness	Zvýšit tvrdost štětce
+	Use	Použít
+	In Front	Vpředu
+	Behind	Vzadu
 
 # Edit › Preferences › AI: local AI models
 	AI	AI

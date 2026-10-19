@@ -3211,6 +3211,7 @@ curves	Smooth	Lisser
 	set name	nom du jeu
 	{set} (modified)	{set} (modifié)
 	Random	Aléatoire
+	Show file name in title	Afficher le nom de fichier dans le titre
 	Accept and Go to Conflict	Accepter et aller au conflit
 	Changes undone.	Modifications annulées.
 	Choose a new shortcut for this command, or leave it without one.	Choisissez un nouveau raccourci pour cette commande ou laissez-la sans raccourci.
@@ -3238,6 +3239,9 @@ curves	Smooth	Lisser
 	Increase Brush Size	Augmenter la taille du pinceau
 	Decrease Brush Hardness	Réduire la dureté du pinceau
 	Increase Brush Hardness	Augmenter la dureté du pinceau
+	Use	Utiliser
+	In Front	Devant
+	Behind	Derrière
 
 # Edit › Preferences › AI: local AI models
 	AI	IA

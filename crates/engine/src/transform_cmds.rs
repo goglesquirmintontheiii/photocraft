@@ -378,6 +378,9 @@ fn apply_transform(
     // With a selection only the selected pixels move, and so only the same region of a linked
     // mask (#205). Groups, type, shapes and smart objects move whole.
     let mask_sel = doc_sel.filter(|_| !moves_whole(l));
+    // The masks (and so a fill's frame) move, but a fill layer's cached render isn't warped:
+    // drop it, the fill re-renders from its model (as `transform_layer_geometry` does).
+    l.fill_cache = None;
     match &mut l.content {
         LayerContent::Group(g) => {
             for c in g.children.iter_mut() {
@@ -990,6 +993,57 @@ mod tests {
         let LayerContent::Shape(sh) = &st.doc.layer(st.active_layer.unwrap()).unwrap().content else { panic!("still a shape layer") };
         assert!(sh.path.subpaths[0].knots.len() > 4, "{}", sh.path.subpaths[0].knots.len());
         assert!(!active_bounds(&s).is_empty());
+    }
+
+    /// A gradient fill layer whose mask (a selection when it was made) frames the gradient over
+    /// 10..40, with the cached render a PSD import gives it: exactly the pixels the fill renders.
+    fn cached_gradient_fill() -> Session {
+        let mut s = session();
+        s.execute("select.rect", json!({"x": 10, "y": 10, "width": 30, "height": 30})).unwrap();
+        s.execute("layer.newFillLayer.gradient", json!({"from": "#ff0000", "to": "#0000ff", "angle": 0})).unwrap();
+        s.execute("select.deselect", json!({})).unwrap();
+        s.edit("cache", |doc, active| {
+            let (fmt, canvas) = (doc.pixel_format(), doc.bounds());
+            let l = doc.layer_mut(active.unwrap()).unwrap();
+            let LayerContent::Fill(f) = &l.content else { panic!("a fill layer") };
+            let buf = photocraft_compose::render_fill_content(l, f, canvas, &[]);
+            let mut surface = Surface::new(fmt);
+            let vals: Vec<f32> = buf.px.iter().flat_map(|p| photocraft_raster::from_rgba(&fmt, *p)).collect();
+            surface.write_region(canvas, &vals);
+            l.fill_cache = Some(photocraft_doc::FillCache { fill: f.clone(), surface });
+            Ok(())
+        })
+        .unwrap();
+        s
+    }
+
+    /// How far the composite is from the composite with the fill re-rendered from its model
+    /// (cache dropped): the largest channel difference.
+    fn off_from_fresh(s: &Session) -> f32 {
+        let st = s.active().unwrap();
+        let mut fresh: Document = (*st.doc).clone();
+        fresh.layer_mut(st.active_layer.unwrap()).unwrap().fill_cache = None;
+        let (a, b) = (photocraft_compose::render(&st.doc, st.doc.bounds()).px, photocraft_compose::render(&fresh, fresh.bounds()).px);
+        a.iter().zip(&b).flat_map(|(p, q)| p.iter().zip(q).map(|(x, y)| (x - y).abs())).fold(0.0, f32::max)
+    }
+
+    #[test]
+    fn transforming_a_fill_layer_drops_its_stale_cached_render() {
+        let mut s = cached_gradient_fill();
+        let off = off_from_fresh(&s);
+        assert!(off < 0.01, "the cache is the fill's own render: {off}");
+        // The mask (and so the gradient's frame) moves 50 px right and doubles in height.
+        s.execute("edit.transform", json!({"matrix": [1, 0, 0, 2, 50, 0]})).unwrap();
+        let off = off_from_fresh(&s);
+        assert!(off < 0.01, "the composite shows the fill laid out in its new frame, not the old render: {off}");
+    }
+
+    #[test]
+    fn warping_a_fill_layer_drops_its_stale_cached_render() {
+        let mut s = cached_gradient_fill();
+        s.execute("edit.transform.warp", json!({"style": "arc", "bend": 50})).unwrap();
+        let off = off_from_fresh(&s);
+        assert!(off < 0.01, "the composite shows the fill laid out in its new frame, not the old render: {off}");
     }
 
     #[test]

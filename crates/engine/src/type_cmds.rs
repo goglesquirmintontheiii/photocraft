@@ -664,6 +664,10 @@ pub(crate) fn with_text_targets(
     mut f: impl FnMut(&mut TextLayer, (usize, usize)) -> Result<()>,
 ) -> Result<Vec<LayerId>> {
     let ids = format_targets(s, p)?;
+    let doc = &s.active().ok_or(EngineError::NoDocument)?.doc;
+    for id in &ids {
+        check_text_unlocked(doc, *id)?;
+    }
     let damage = s.edit(label, |doc, _| {
         let snapshot = doc.clone();
         let mut damage = Some(photocraft_geom::Rect::EMPTY);
@@ -1419,6 +1423,35 @@ mod tests {
         s.execute("edit.undo", json!({})).unwrap();
         assert_eq!(text_layer(&s, id).text, "a");
         assert_eq!(s.active().unwrap().history.past_len(), history);
+    }
+
+    #[test]
+    fn all_locked_type_layer_rejects_formatting_without_history() {
+        let mut s = session();
+        let id = s.execute("type.create", json!({"x": 20, "y": 20, "text": "a", "size": 12})).unwrap()["layer"].as_u64().unwrap();
+        let other = s.execute("type.create", json!({"x": 20, "y": 60, "text": "b", "size": 12})).unwrap()["layer"].as_u64().unwrap();
+        s.execute("layer.setProps", json!({"layer": id, "locked": true})).unwrap();
+        let before = text_layer(&s, id);
+        let history = s.active().unwrap().history.past_len();
+
+        for (cmd, p) in [
+            ("type.setStyle", json!({"layer": id, "size": 40, "fauxBold": true})),
+            ("type.setStyle", json!({"layers": [other, id], "size": 40})),
+            ("type.warpText", json!({"layer": id, "style": "arc"})),
+            ("type.antiAlias.none", json!({"layer": id})),
+            ("type.orientation.vertical", json!({"layer": id})),
+            ("type.openType.swash", json!({"layer": id})),
+        ] {
+            let result = s.execute(cmd, p);
+            assert!(matches!(&result, Err(EngineError::Other(message)) if message.contains("locked")), "{cmd}: {result:?}");
+        }
+        assert_eq!(text_layer(&s, id), before);
+        assert_eq!(text_layer(&s, other).size_pt, 12.0);
+        assert_eq!(s.active().unwrap().history.past_len(), history);
+
+        s.execute("layer.setProps", json!({"layer": id, "locked": false})).unwrap();
+        s.execute("type.setStyle", json!({"layer": id, "size": 40})).unwrap();
+        assert_eq!(text_layer(&s, id).size_pt, 40.0);
     }
 
     #[test]

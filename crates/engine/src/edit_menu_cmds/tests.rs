@@ -137,10 +137,15 @@ fn blob_session(depth: u32) -> Session {
 fn content_aware_fill_huge_area_neither_panics_nor_wraps() {
     let mut s = blob_session(8);
     // `[1e30, 0, 1e30, 10]` overflowed the i32 additions in the area parser (a debug-build
-    // panic, a garbage sampling window in release); the additions saturate now, so this is
-    // simply a whole-canvas window.
-    let r = s.execute("edit.contentAwareFill", json!({"sampling": "custom", "area": [1e30, 0.0, 1e30, 10.0], "colorAdaptation": "none"})).unwrap();
-    assert!(r["filled"].as_u64().unwrap() > 100);
+    // panic, a garbage sampling window in release); the additions saturate now, so the area lies
+    // wholly right of the canvas: nothing to sample, which is an error, not a black fill (#6532).
+    let before = s.active().unwrap().doc.clone();
+    let past = s.active().unwrap().history.past_len();
+    let err = s.execute("edit.contentAwareFill", json!({"sampling": "custom", "area": [1e30, 0.0, 1e30, 10.0], "colorAdaptation": "none"})).unwrap_err();
+    assert!(err.to_string().contains("nothing to sample from"), "{err}");
+    let st = s.active().unwrap();
+    assert!(std::sync::Arc::ptr_eq(&before, &st.doc), "the document changed");
+    assert_eq!(st.history.past_len(), past, "a history step was recorded");
     // A malformed area names the problem instead of silently falling back.
     for area in [json!([0.0, 0.0, null, 10.0]), json!([0.0, 0.0, 10.0]), json!("nope")] {
         let err = s.execute("edit.contentAwareFill", json!({"sampling": "custom", "area": area})).unwrap_err();
@@ -342,6 +347,23 @@ fn content_aware_fill_takes_the_workspace_edits() {
     // The command fills with the same plan; `layer` names the layer even when another is active.
     let r = s.execute("edit.contentAwareFill", json!({"sampling": "rectangular", "fillEdits": [{"op": "expand", "by": 2}], "layer": id.0})).unwrap();
     assert!(r["filled"].as_u64().unwrap() > 2800);
+}
+
+/// #6532: a sampling area with no pixels outside the fill area is refused instead of filling it
+/// black, and leaves the document untouched; any margin past the selection fills.
+#[test]
+fn content_aware_fill_with_nothing_to_sample_is_refused() {
+    let mut s = blob_session(8);
+    let before = px(&s, 30, 22);
+    let revision = s.active().unwrap().revision;
+    for p in [json!({"sampling": "rectangular", "margin": 0}), json!({"sampling": "custom", "area": [28, 18, 4, 4]})] {
+        let e = s.execute("edit.contentAwareFill", p.clone()).unwrap_err().to_string();
+        assert!(e.contains("nothing to sample from"), "{p}: {e}");
+        assert_eq!(px(&s, 30, 22), before, "{p}: nothing was filled");
+        assert_eq!(s.active().unwrap().revision, revision, "{p}: no history step");
+    }
+    s.execute("edit.contentAwareFill", json!({"sampling": "rectangular", "margin": 1})).unwrap();
+    assert_ne!(px(&s, 30, 22), before, "the red blob is filled from around the selection");
 }
 
 #[test]
@@ -670,4 +692,50 @@ fn fade_allocation_failure_keeps_document_and_history() {
         assert!(s.undo());
         assert_eq!(*s.active().unwrap().doc, *before);
     }
+}
+
+#[test]
+fn tool_presets_round_trip_through_export_import() {
+    let mut source = Session::new();
+    source.execute("tool.presets.new", json!({"name":"2 : 3", "tool":"crop", "options":{"toolOptions":{"crop_ratio":"2:3"}}})).unwrap();
+    let exported = source.execute("edit.presets.exportImportPresets", json!({"action":"export"})).unwrap();
+    assert_eq!(exported["tools"], 1);
+    assert_eq!(exported["data"]["toolPresets"][0]["name"], "2 : 3");
+    let mut target = Session::new();
+    target.execute("tool.presets.new", json!({"name":"2 : 3", "tool":"crop", "options":{"toolOptions":{"crop_ratio":"1:1"}}})).unwrap();
+    for _ in 0..2 {
+        let result = target.execute("edit.presets.exportImportPresets", json!({"action":"import", "data":exported["data"]})).unwrap();
+        assert_eq!(result["tools"], 1);
+    }
+    let selected = target.execute("tool.presets.select", json!({"preset":"2 : 3"})).unwrap();
+    assert_eq!(selected["options"]["toolOptions"]["crop_ratio"], "2:3");
+    assert_eq!(target.presets.tool_presets.iter().filter(|p| p.name == "2 : 3").count(), 1);
+    let only_brushes = source.execute("edit.presets.exportImportPresets", json!({"kinds":["brushes"]})).unwrap();
+    assert_eq!(only_brushes["tools"], 0);
+    let with_builtins = source.execute("edit.presets.exportImportPresets", json!({"kinds":["tools"], "includeBuiltins":true})).unwrap();
+    assert_eq!(with_builtins["tools"].as_u64().unwrap() as usize, source.presets.tool_presets.len());
+}
+
+#[test]
+fn tool_preset_import_is_validated_before_mutation_and_accepts_old_files() {
+    let mut s = Session::new();
+    let before = s.presets.tool_presets.clone();
+    for preset in [
+        json!({"name":"", "tool":"crop", "options":{}}),
+        json!({"name":"x".repeat(256), "tool":"crop", "options":{}}),
+        json!({"name":"Crop", "tool":" ", "options":{}}),
+        json!({"name":"Crop", "tool":"crop", "options":[]}),
+    ] {
+        let result = s.execute(
+            "edit.presets.exportImportPresets",
+            json!({"action":"import", "data":{"format":PRESET_FORMAT, "toolPresets":[{"name":"Valid", "tool":"crop", "options":{}}, preset]}}),
+        );
+        assert!(result.is_err());
+        assert_eq!(s.presets.tool_presets, before);
+    }
+    let too_many: Vec<_> = (0..crate::presets::tools::MAX_PRESETS + 1).map(|i| json!({"name":format!("Crop {i}"), "tool":"crop", "options":{}})).collect();
+    assert!(s.execute("edit.presets.exportImportPresets", json!({"action":"import", "data":{"format":PRESET_FORMAT, "toolPresets":too_many}})).is_err());
+    assert_eq!(s.presets.tool_presets, before);
+    let result = s.execute("edit.presets.exportImportPresets", json!({"action":"import", "data":{"format":PRESET_FORMAT, "version":1}})).unwrap();
+    assert_eq!(result["tools"], 0);
 }

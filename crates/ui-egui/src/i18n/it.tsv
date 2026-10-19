@@ -4325,6 +4325,7 @@ shape	Appearance	Aspetto
 	There are too many sets: delete one first.	Ci sono troppi set: eliminane prima uno.
 	set name	nome del set
 	{set} (modified)	{set} (modificato)
+	Show file name in title	Mostra nome file nel titolo
 	Accept and Go to Conflict	Accetta e vai al conflitto
 	Changes undone.	Modifiche annullate.
 	Choose a new shortcut for this command, or leave it without one.	Scegli una nuova scorciatoia per questo comando o lascialo senza.
@@ -4347,6 +4348,9 @@ shape	Appearance	Aspetto
 	GPU Memory (MB, 0 = Automatic)	Memoria GPU (MB, 0 = Automatico)
 	{name} was changed by another app after it was opened or saved here.	{name} è stato modificato da un'altra app dopo essere stato aperto o salvato qui.
 	Replace it with this document, or cancel and use File › Save As to keep both.	Sostituiscilo con questo documento, oppure annulla e usa File › Salva con nome per tenerli entrambi.
+	Use	Usa
+	In Front	Davanti
+	Behind	Dietro
 
 # Edit › Preferences › AI: local AI models
 	AI	IA

@@ -31,7 +31,7 @@ fn indexed_png_keeps_duplicate_palette_colors_opaque() {
     // choose the first red entry for both pixels, making the opaque one disappear on save.
     let palette = [[255, 0, 0], [0, 255, 0], [255, 0, 0], [0, 0, 255]];
     for transparent in [0, 2] {
-        let png = photocraft_codecs::encode_png_indexed(4, 1, &[0, 1, 2, 3], &palette, Some(transparent), None).unwrap();
+        let png = photocraft_codecs::encode_png_indexed(4, 1, &[0, 1, 2, 3], &palette, Some(transparent), None, None).unwrap();
         let d = photocraft_io::import("in.png", &png).unwrap().document;
         assert_eq!(d.mode, ColorMode::Indexed);
         let before = d.color_table.clone();
@@ -102,7 +102,7 @@ fn indexed_png_keeps_the_last_palette_index() {
     palette[0] = [255, 0, 0];
     palette[255] = [255, 0, 0];
     for transparent in [0, 255] {
-        let png = photocraft_codecs::encode_png_indexed(2, 1, &[0, 255], &palette, Some(transparent), None).unwrap();
+        let png = photocraft_codecs::encode_png_indexed(2, 1, &[0, 255], &palette, Some(transparent), None, None).unwrap();
         let d = photocraft_io::import("in.png", &png).unwrap().document;
         let r = photocraft_io::export(&d, "out.png", &Default::default()).unwrap();
         assert_eq!(photocraft_codecs::png_palette(&r.bytes).unwrap(), photocraft_codecs::png_palette(&png).unwrap());
@@ -112,7 +112,7 @@ fn indexed_png_keeps_the_last_palette_index() {
 
 #[test]
 fn indexed_png_keeps_a_single_transparent_entry() {
-    let png = photocraft_codecs::encode_png_indexed(2, 1, &[0, 0], &[[255, 0, 0]], Some(0), None).unwrap();
+    let png = photocraft_codecs::encode_png_indexed(2, 1, &[0, 0], &[[255, 0, 0]], Some(0), None, None).unwrap();
     let d = photocraft_io::import("in.png", &png).unwrap().document;
     let r = photocraft_io::export(&d, "out.png", &Default::default()).unwrap();
     assert_eq!(photocraft_codecs::png_palette(&r.bytes).unwrap(), photocraft_codecs::png_palette(&png).unwrap());

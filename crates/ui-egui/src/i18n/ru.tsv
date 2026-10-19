@@ -3176,6 +3176,7 @@ curves	Smooth	Сгладить
 	set name	имя набора
 	{set} (modified)	{set} (изменён)
 	Random	Случайно
+	Show file name in title	Показывать имя файла в заголовке
 	Accept and Go to Conflict	Принять и перейти к конфликту
 	Changes undone.	Изменения отменены.
 	Choose a new shortcut for this command, or leave it without one.	Выберите новую комбинацию для этой команды или оставьте её без комбинации.
@@ -3203,6 +3204,10 @@ curves	Smooth	Сгладить
 	Increase Brush Size	Увеличить размер кисти
 	Decrease Brush Hardness	Уменьшить жёсткость кисти
 	Increase Brush Hardness	Увеличить жёсткость кисти
+	Command	Command
+	Use	Использовать
+	In Front	Спереди
+	Behind	Сзади
 
 # Edit › Preferences › AI: local AI models
 	AI	ИИ
