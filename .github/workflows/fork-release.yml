@@ -3,21 +3,18 @@ name: Fork release (Linux AppImage)
 # Builds PhotoCraft for Linux x86_64 as an AppImage (runs on Fedora and any distro with glibc
 # 2.35 or newer) and publishes it as a GitHub release of this fork.
 #
-# Trigger: push a tag named fork-v<version>, e.g. `git tag fork-v0.10.0.1 && git push origin fork-v0.10.0.1`,
-# or run it from the Actions tab with a tag name.
+# Trigger: a push to the fork-builds branch that changes release-notes/VERSION. The release is
+# tagged fork-v<that version> and uses release-notes/fork-v<version>.md as its notes. It can
+# also be run from the Actions tab.
 #
 # This workflow belongs to the goglesquirmintontheiii/photocraft fork only: it needs no signing
 # secrets and is kept out of pull requests to storytold/photocraft.
 
 on:
   push:
-    tags: ["fork-v*"]
+    branches: [fork-builds]
+    paths: ["release-notes/VERSION"]
   workflow_dispatch:
-    inputs:
-      tag:
-        description: "Tag to build and release (fork-v<version>)"
-        required: true
-        type: string
 
 permissions:
   contents: write
@@ -34,17 +31,17 @@ jobs:
     env:
       CARGO_TERM_COLOR: always
       CARGO_INCREMENTAL: 0
-      TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag || github.ref }}
           fetch-depth: 1
 
-      - name: Version from the tag
+      - name: Version from release-notes/VERSION
         run: |
-          case "$TAG" in fork-v*) ;; *) echo "::error::tag must look like fork-v0.10.0.1, got $TAG"; exit 1 ;; esac
-          echo "PHOTOCRAFT_VERSION=${TAG#fork-v}" >> "$GITHUB_ENV"
+          version="$(tr -d '[:space:]' < release-notes/VERSION)"
+          case "$version" in [0-9]*.[0-9]*) ;; *) echo "::error::release-notes/VERSION must hold a version like 0.10.0.1, got '$version'"; exit 1 ;; esac
+          echo "TAG=fork-v$version" >> "$GITHUB_ENV"
+          echo "PHOTOCRAFT_VERSION=$version" >> "$GITHUB_ENV"
           echo "PHOTOCRAFT_BUILD_DATE=$(date -u +%Y-%m-%d)" >> "$GITHUB_ENV"
           echo "PHOTOCRAFT_BUILD_SHA=$GITHUB_SHA" >> "$GITHUB_ENV"
 
@@ -93,5 +90,5 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" dist/release/*.AppImage* --clobber
           else
-            gh release create "$TAG" dist/release/*.AppImage* --title "PhotoCraft ${TAG#fork-v} (fork)" --prerelease "${args[@]}"
+            gh release create "$TAG" dist/release/*.AppImage* --target "$GITHUB_SHA" --title "PhotoCraft ${TAG#fork-v} (fork)" --prerelease "${args[@]}"
           fi
