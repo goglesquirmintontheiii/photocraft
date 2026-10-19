@@ -3243,7 +3243,7 @@ curves	Smooth	Lisser
 	AI	IA
 	AI Models…	Modèles d'IA…
 	AI models run in the desktop app. Download PhotoCraft for your computer to use them.	Les modèles d'IA fonctionnent dans l'application de bureau. Téléchargez PhotoCraft pour votre ordinateur pour les utiliser.
-	AI…	IA…
+	AI Models	Modèles d'IA
 	Add a model from a file or a link	Ajouter un modèle depuis un fichier ou un lien
 	Cancelled	Annulé
 	Choose Files…	Choisir des fichiers…
@@ -3283,3 +3283,30 @@ curves	Smooth	Lisser
 	{done} of {total}	{done} sur {total}
 	{n} installed	{n} installé(s)
 	{n} to download	{n} à télécharger
+
+# AI Object Selection, the Generative Brushes, AI Models accounts
+	AI Object Selection found nothing there — try a box around the object	La sélection d'objet IA n'a rien trouvé ici — tracez un cadre autour de l'objet
+	Accounts	Comptes
+	Also in {sections}	Aussi dans {sections}
+	Choose one or more uses, or paste a link to guess them.	Choisissez un ou plusieurs usages, ou collez un lien pour les deviner.
+	Download a model in Edit › Preferences › AI Models	Téléchargez un modèle dans Édition › Préférences › Modèles d'IA
+	Drag a box around the object, or click it	Faites glisser un cadre autour de l'objet, ou cliquez dessus
+	Generative Brush	Pinceau génératif
+	Get Models…	Obtenir des modèles…
+	Get a token	Obtenir un jeton
+	Guessed from the link. Click a use to change it.	Déduit du lien. Cliquez sur un usage pour le modifier.
+	Hide the token	Masquer le jeton
+	Model:	Modèle :
+	No {kind} model yet. Download one in Edit › Preferences › AI Models.	Aucun modèle {kind} pour l'instant. Téléchargez-en un dans Édition › Préférences › Modèles d'IA.
+	Not signed in	Non connecté
+	Paint over the reflection	Peignez sur le reflet
+	Paint over what to remove	Peignez sur ce qu'il faut supprimer
+	Rename this model	Renommer ce modèle
+	Show the token	Afficher le jeton
+	Some models need you to sign in before they download. Paste an access token from your account; it's kept on this computer and sent only to its own site.	Certains modèles demandent de vous connecter avant le téléchargement. Collez un jeton d'accès de votre compte ; il reste sur cet ordinateur et n'est envoyé qu'à son propre site.
+	This build can't run AI models	Cette version ne peut pas exécuter de modèles d'IA
+	{n} signed in	{n} connecté(s)
+	AI Object Selection Tool	Outil Sélection d'objet IA
+	Generative Removal Brush Tool	Pinceau Suppression générative
+	Reflection Removal Brush Tool	Pinceau Suppression des reflets
+	API key	Clé d'API

@@ -11,6 +11,13 @@ build = "build.rs"
 # Open HEIC/HEIF photos (the optional photocraft-heif crate). Not default so distributors choose
 # it; official builds (CI, packaging/, release) build with `--features heif`.
 heif = ["photocraft-codecs/heif"]
+# Run local AI models (AI Object Selection, the Generative Brushes) with ONNX Runtime, linked in
+# (downloaded while building). `ai-directml` adds the GPU on Windows (DirectML.dll goes beside the
+# executable), `ai-webgpu` the GPU on Linux through Vulkan (libwebgpu_dawn.so goes in ../lib).
+# Without them the AI tools say the build can't run models.
+ai = ["photocraft-ml/onnx"]
+ai-directml = ["ai", "photocraft-ml/directml"]
+ai-webgpu = ["ai", "photocraft-ml/webgpu"]
 
 [lints]
 workspace = true

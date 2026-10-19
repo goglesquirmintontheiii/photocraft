@@ -3416,7 +3416,7 @@ curves	Smooth	매끄럽게
 	AI	AI
 	AI Models…	AI 모델…
 	AI models run in the desktop app. Download PhotoCraft for your computer to use them.	AI 모델은 데스크톱 앱에서 실행됩니다. 사용하려면 컴퓨터용 PhotoCraft를 다운로드하세요.
-	AI…	AI…
+	AI Models	AI 모델
 	Add a model from a file or a link	파일 또는 링크에서 모델 추가
 	Cancelled	취소됨
 	Choose Files…	파일 선택…
@@ -3457,3 +3457,30 @@ curves	Smooth	매끄럽게
 	{done} of {total}	{done} / {total}
 	{n} installed	{n}개 설치됨
 	{n} to download	{n}개 다운로드 가능
+
+# AI Object Selection, the Generative Brushes, AI Models accounts
+	AI Object Selection found nothing there — try a box around the object	AI 개체 선택이 그곳에서 아무것도 찾지 못했습니다 — 개체 주위에 상자를 그려 보세요
+	Accounts	계정
+	Also in {sections}	{sections}에도 있음
+	Choose one or more uses, or paste a link to guess them.	용도를 하나 이상 선택하거나, 링크를 붙여 넣어 추측하게 하세요.
+	Download a model in Edit › Preferences › AI Models	편집 › 환경 설정 › AI 모델에서 모델을 다운로드하세요
+	Drag a box around the object, or click it	개체 주위로 상자를 드래그하거나 클릭하세요
+	Generative Brush	생성형 브러시
+	Get Models…	모델 받기…
+	Get a token	토큰 받기
+	Guessed from the link. Click a use to change it.	링크로 추측했습니다. 용도를 클릭해 바꿀 수 있습니다.
+	Hide the token	토큰 숨기기
+	Model:	모델:
+	No {kind} model yet. Download one in Edit › Preferences › AI Models.	아직 {kind} 모델이 없습니다. 편집 › 환경 설정 › AI 모델에서 다운로드하세요.
+	Not signed in	로그인 안 됨
+	Paint over the reflection	반사 부분 위를 칠하세요
+	Paint over what to remove	제거할 부분 위를 칠하세요
+	Rename this model	이 모델 이름 바꾸기
+	Show the token	토큰 표시
+	Some models need you to sign in before they download. Paste an access token from your account; it's kept on this computer and sent only to its own site.	일부 모델은 다운로드 전에 로그인이 필요합니다. 계정의 액세스 토큰을 붙여 넣으세요. 토큰은 이 컴퓨터에 저장되며 해당 사이트로만 전송됩니다.
+	This build can't run AI models	이 빌드는 AI 모델을 실행할 수 없습니다
+	{n} signed in	{n}개 로그인됨
+	AI Object Selection Tool	AI 개체 선택 도구
+	Generative Removal Brush Tool	생성형 제거 브러시
+	Reflection Removal Brush Tool	반사 제거 브러시
+	API key	API 키

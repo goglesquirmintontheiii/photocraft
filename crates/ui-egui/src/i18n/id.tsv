@@ -3230,7 +3230,7 @@ curves	Smooth	Haluskan
 	AI	AI
 	AI Models…	Model AI…
 	AI models run in the desktop app. Download PhotoCraft for your computer to use them.	Model AI berjalan di aplikasi desktop. Unduh PhotoCraft untuk komputer Anda untuk menggunakannya.
-	AI…	AI…
+	AI Models	Model AI
 	Add a model from a file or a link	Tambahkan model dari file atau tautan
 	Cancelled	Dibatalkan
 	Choose Files…	Pilih File…
@@ -3270,3 +3270,30 @@ curves	Smooth	Haluskan
 	{done} of {total}	{done} dari {total}
 	{n} installed	{n} terpasang
 	{n} to download	{n} dapat diunduh
+
+# AI Object Selection, the Generative Brushes, AI Models accounts
+	AI Object Selection found nothing there — try a box around the object	Pemilihan Objek AI tidak menemukan apa pun di sana — coba kotak di sekitar objek
+	Accounts	Akun
+	Also in {sections}	Juga di {sections}
+	Choose one or more uses, or paste a link to guess them.	Pilih satu kegunaan atau lebih, atau tempel tautan untuk menebaknya.
+	Download a model in Edit › Preferences › AI Models	Unduh model di Edit › Preferensi › Model AI
+	Drag a box around the object, or click it	Seret kotak di sekitar objek, atau klik objeknya
+	Generative Brush	Kuas Generatif
+	Get Models…	Dapatkan Model…
+	Get a token	Dapatkan token
+	Guessed from the link. Click a use to change it.	Ditebak dari tautan. Klik kegunaan untuk mengubahnya.
+	Hide the token	Sembunyikan token
+	Model:	Model:
+	No {kind} model yet. Download one in Edit › Preferences › AI Models.	Belum ada model {kind}. Unduh di Edit › Preferensi › Model AI.
+	Not signed in	Belum masuk
+	Paint over the reflection	Lukis di atas pantulan
+	Paint over what to remove	Lukis di atas yang ingin dihapus
+	Rename this model	Ganti nama model ini
+	Show the token	Tampilkan token
+	Some models need you to sign in before they download. Paste an access token from your account; it's kept on this computer and sent only to its own site.	Beberapa model mengharuskan Anda masuk sebelum diunduh. Tempel token akses dari akun Anda; token disimpan di komputer ini dan hanya dikirim ke situsnya sendiri.
+	This build can't run AI models	Build ini tidak dapat menjalankan model AI
+	{n} signed in	{n} masuk
+	AI Object Selection Tool	Alat Pemilihan Objek AI
+	Generative Removal Brush Tool	Kuas Penghapusan Generatif
+	Reflection Removal Brush Tool	Kuas Penghapusan Pantulan
+	API key	Kunci API

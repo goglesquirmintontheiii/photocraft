@@ -43,20 +43,20 @@ fn sampling_margin(area: Rect) -> i32 {
 }
 
 /// What a removal does, checked before any work starts.
-struct Plan {
-    id: Option<LayerId>,
+pub(super) struct Plan {
+    pub(super) id: Option<LayerId>,
     /// One stroke (`points`), or several applied together (`strokes`).
-    strokes: Vec<Stroke>,
+    pub(super) strokes: Vec<Stroke>,
     /// Where the fill samples from: the strokes plus a margin, on the canvas.
-    window: Rect,
-    close_loops: bool,
-    all_layers: bool,
+    pub(super) window: Rect,
+    pub(super) close_loops: bool,
+    pub(super) all_layers: bool,
     /// The fill goes to a new layer above the target instead of into it.
-    new_layer: bool,
+    pub(super) new_layer: bool,
 }
 
 /// The stroke's bounding box (points ± the brush radius), before any coverage is rendered.
-fn stroke_bounds(stroke: &Stroke) -> Rect {
+pub(super) fn stroke_bounds(stroke: &Stroke) -> Rect {
     let r = f64::from(stroke.brush.size) / 2.0 + 2.0;
     let (mut x0, mut y0, mut x1, mut y1) = (f64::MAX, f64::MAX, f64::MIN, f64::MIN);
     for q in &stroke.points {
@@ -68,15 +68,15 @@ fn stroke_bounds(stroke: &Stroke) -> Rect {
 
 /// The strokes of the request: `strokes` (several, each a list of points, sharing the brush
 /// and the target) or the one in `points`.
-fn parse_strokes(s: &Session, p: &Value) -> Result<(Vec<Stroke>, Option<LayerId>)> {
+pub(super) fn parse_strokes(s: &Session, p: &Value, cmd: &str) -> Result<(Vec<Stroke>, Option<LayerId>)> {
     let Some(list) = p.get("strokes") else {
-        let (stroke, id) = parse_brush(s, p, CMD)?;
-        reject_huge_stroke(CMD, &stroke)?;
+        let (stroke, id) = parse_brush(s, p, cmd)?;
+        reject_huge_stroke(cmd, &stroke)?;
         return Ok((vec![stroke], id));
     };
-    let list = list.as_array().ok_or_else(|| bad(CMD, "`strokes` is a list of point lists"))?;
+    let list = list.as_array().ok_or_else(|| bad(cmd, "`strokes` is a list of point lists"))?;
     if list.is_empty() {
-        return Err(bad(CMD, "`strokes` is empty"));
+        return Err(bad(cmd, "`strokes` is empty"));
     }
     let mut strokes = Vec::with_capacity(list.len());
     let mut id = None;
@@ -86,26 +86,31 @@ fn parse_strokes(s: &Session, p: &Value) -> Result<(Vec<Stroke>, Option<LayerId>
             o.remove("strokes");
             o.insert("points".into(), points.clone());
         }
-        let (stroke, layer) = parse_brush(s, &one, CMD)?;
-        reject_huge_stroke(CMD, &stroke)?;
+        let (stroke, layer) = parse_brush(s, &one, cmd)?;
+        reject_huge_stroke(cmd, &stroke)?;
         strokes.push(stroke);
         id = layer;
     }
     Ok((strokes, id))
 }
 
-fn plan(s: &Session, p: &Value) -> Result<Plan> {
-    let (strokes, id) = parse_strokes(s, p)?;
+pub(super) fn plan(s: &Session, p: &Value) -> Result<Plan> {
+    plan_for(s, p, CMD)
+}
+
+/// [`plan`] for another command that paints a hole the same way (the generative brushes).
+pub(super) fn plan_for(s: &Session, p: &Value, cmd: &str) -> Result<Plan> {
+    let (strokes, id) = parse_strokes(s, p, cmd)?;
     let d = s.active().ok_or(EngineError::NoDocument)?;
     let canvas = d.doc.bounds();
-    let bounds = strokes.iter().map(stroke_bounds).reduce(|a, b| a.union(&b)).ok_or_else(|| bad(CMD, "`strokes` is empty"))?;
+    let bounds = strokes.iter().map(stroke_bounds).reduce(|a, b| a.union(&b)).ok_or_else(|| bad(cmd, "`strokes` is empty"))?;
     let pixels = u64::from(bounds.width()) * u64::from(bounds.height());
     if pixels > MAX_PIXELS {
-        return Err(bad(CMD, format!("the stroke is too large to remove ({pixels} pixels, at most {MAX_PIXELS})")));
+        return Err(bad(cmd, format!("the stroke is too large to remove ({pixels} pixels, at most {MAX_PIXELS})")));
     }
     let area = bounds.intersect(&canvas);
     if area.is_empty() {
-        return Err(bad(CMD, "the stroke is outside the canvas"));
+        return Err(bad(cmd, "the stroke is outside the canvas"));
     }
     let window = area.inflate(sampling_margin(area).min(MAX_MARGIN)).intersect(&canvas);
     let close_loops = flag(p, "closeLoops", true);
@@ -117,7 +122,7 @@ fn plan(s: &Session, p: &Value) -> Result<Plan> {
 
 /// The hole over the plan's window: the strokes' footprints, their enclosed areas and a margin,
 /// limited to the selection. Empty when nothing would change.
-fn hole(plan: &Plan, sel: Option<&Surface>) -> Result<Vec<bool>> {
+pub(super) fn hole(plan: &Plan, sel: Option<&Surface>) -> Result<Vec<bool>> {
     let win = plan.window;
     let (w, h) = (win.width() as usize, win.height() as usize);
     let mut m = vec![false; w * h];
@@ -179,7 +184,7 @@ fn run_remove(doc: &mut Document, plan: &Plan, p: &Value, ctx: &crate::jobs::Job
 
 /// The fill on a new layer above `id`: the hole's pixels (opaque where the source had no alpha),
 /// transparent elsewhere. Returns the damage and the new layer.
-fn fill_to_new_layer(doc: &mut Document, id: Option<LayerId>, out: &Region, hole: &[bool]) -> Result<(Rect, LayerId)> {
+pub(super) fn fill_to_new_layer(doc: &mut Document, id: Option<LayerId>, out: &Region, hole: &[bool]) -> Result<(Rect, LayerId)> {
     let base = doc.pixel_format();
     let fmt = PixelFormat::new(base.mode, base.sample, true);
     let n = fmt.channels();

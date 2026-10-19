@@ -2843,7 +2843,7 @@ curves	Smooth	平滑
 	AI	AI
 	AI Models…	AI 模型…
 	AI models run in the desktop app. Download PhotoCraft for your computer to use them.	AI 模型在桌面應用程式中執行。請下載適用於你電腦的 PhotoCraft 來使用它們。
-	AI…	AI…
+	AI Models	AI 模型
 	Add a model from a file or a link	從檔案或連結加入模型
 	Cancelled	已取消
 	Choose Files…	選擇檔案…
@@ -2884,3 +2884,30 @@ curves	Smooth	平滑
 	{done} of {total}	{done} / {total}
 	{n} installed	已安裝 {n} 個
 	{n} to download	{n} 個可下載
+
+# AI Object Selection, the Generative Brushes, AI Models accounts
+	AI Object Selection found nothing there — try a box around the object	AI 物件選取在那裡沒有找到任何內容 — 請框選物件
+	Accounts	帳戶
+	Also in {sections}	也在 {sections} 中
+	Choose one or more uses, or paste a link to guess them.	選擇一個或多個用途，或貼上連結讓它自動猜測。
+	Download a model in Edit › Preferences › AI Models	在 編輯 › 偏好設定 › AI 模型 中下載模型
+	Drag a box around the object, or click it	在物件周圍拖出一個框，或按一下它
+	Generative Brush	生成式筆刷
+	Get Models…	取得模型…
+	Get a token	取得權杖
+	Guessed from the link. Click a use to change it.	已根據連結猜測。按一下某個用途即可變更。
+	Hide the token	隱藏權杖
+	Model:	模型:
+	No {kind} model yet. Download one in Edit › Preferences › AI Models.	還沒有 {kind} 模型。請在 編輯 › 偏好設定 › AI 模型 中下載。
+	Not signed in	未登入
+	Paint over the reflection	在反光處塗抹
+	Paint over what to remove	在要移除的內容上塗抹
+	Rename this model	重新命名此模型
+	Show the token	顯示權杖
+	Some models need you to sign in before they download. Paste an access token from your account; it's kept on this computer and sent only to its own site.	部分模型需要登入後才能下載。請貼上你帳戶的存取權杖；它會儲存在這台電腦上，只會傳送到對應的網站。
+	This build can't run AI models	此版本無法執行 AI 模型
+	{n} signed in	已登入 {n} 個
+	AI Object Selection Tool	AI 物件選取工具
+	Generative Removal Brush Tool	生成式移除筆刷
+	Reflection Removal Brush Tool	反光移除筆刷
+	API key	API 金鑰

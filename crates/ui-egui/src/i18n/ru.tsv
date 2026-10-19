@@ -3208,7 +3208,7 @@ curves	Smooth	Сгладить
 	AI	ИИ
 	AI Models…	Модели ИИ…
 	AI models run in the desktop app. Download PhotoCraft for your computer to use them.	Модели ИИ работают в настольном приложении. Скачайте PhotoCraft для своего компьютера, чтобы ими пользоваться.
-	AI…	ИИ…
+	AI Models	Модели ИИ
 	Add a model from a file or a link	Добавить модель из файла или по ссылке
 	Cancelled	Отменено
 	Choose Files…	Выбрать файлы…
@@ -3248,3 +3248,30 @@ curves	Smooth	Сгладить
 	{done} of {total}	{done} из {total}
 	{n} installed	Установлено: {n}
 	{n} to download	Можно скачать: {n}
+
+# AI Object Selection, the Generative Brushes, AI Models accounts
+	AI Object Selection found nothing there — try a box around the object	Выделение объектов ИИ ничего там не нашло — обведите объект рамкой
+	Accounts	Учётные записи
+	Also in {sections}	Также в: {sections}
+	Choose one or more uses, or paste a link to guess them.	Выберите одно или несколько назначений или вставьте ссылку, чтобы угадать их.
+	Download a model in Edit › Preferences › AI Models	Скачайте модель в разделе Редактирование › Настройки › Модели ИИ
+	Drag a box around the object, or click it	Обведите объект рамкой или щёлкните по нему
+	Generative Brush	Генеративная кисть
+	Get Models…	Получить модели…
+	Get a token	Получить токен
+	Guessed from the link. Click a use to change it.	Определено по ссылке. Щёлкните назначение, чтобы изменить его.
+	Hide the token	Скрыть токен
+	Model:	Модель:
+	No {kind} model yet. Download one in Edit › Preferences › AI Models.	Модели для «{kind}» пока нет. Скачайте её в разделе Редактирование › Настройки › Модели ИИ.
+	Not signed in	Вход не выполнен
+	Paint over the reflection	Закрасьте отражение
+	Paint over what to remove	Закрасьте то, что нужно удалить
+	Rename this model	Переименовать эту модель
+	Show the token	Показать токен
+	Some models need you to sign in before they download. Paste an access token from your account; it's kept on this computer and sent only to its own site.	Некоторые модели требуют входа перед загрузкой. Вставьте токен доступа из своей учётной записи; он хранится на этом компьютере и отправляется только на свой сайт.
+	This build can't run AI models	Эта сборка не может запускать модели ИИ
+	{n} signed in	Вход выполнен: {n}
+	AI Object Selection Tool	Инструмент «Выделение объектов ИИ»
+	Generative Removal Brush Tool	Кисть «Генеративное удаление»
+	Reflection Removal Brush Tool	Кисть «Удаление отражений»
+	API key	Ключ API

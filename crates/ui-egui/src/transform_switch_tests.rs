@@ -10,7 +10,7 @@ use crate::PhotocraftApp;
 /// The app with a 400 × 300 document: a red 100 × 60 rectangle at (100, 100) on its own layer
 /// above the Background.
 fn app() -> Harness<'static, PhotocraftApp> {
-    let mut h = Harness::builder().with_size(egui::vec2(1400.0, 900.0)).with_max_steps(64).build_eframe(|cc| {
+    let mut h = Harness::builder().with_size(egui::vec2(1400.0, 1000.0)).with_max_steps(64).build_eframe(|cc| {
         PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
         let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 400, "height": 300, "background": "white"})).unwrap();
@@ -58,7 +58,7 @@ fn picking_another_tool_in_the_toolbar_applies_the_transform() {
 /// the same step), as Place Embedded leaves it for the box `begin_placed` opens: cancelling the
 /// place takes that step back.
 fn placed_app() -> Harness<'static, PhotocraftApp> {
-    let mut h = Harness::builder().with_size(egui::vec2(1400.0, 900.0)).with_max_steps(64).build_eframe(|cc| {
+    let mut h = Harness::builder().with_size(egui::vec2(1400.0, 1000.0)).with_max_steps(64).build_eframe(|cc| {
         PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
         let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 400, "height": 300, "background": "white"})).unwrap();

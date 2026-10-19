@@ -8,6 +8,7 @@
 #   $DIST/photocraft-<version>-linux-<arch>.tar.gz    plain FHS-style tree (bin/, share/)
 #
 # Usage: packaging/linux/package.sh [--skip-build] [--formats "appimage deb rpm tar"]
+# PHOTOCRAFT_FEATURES adds cargo features to the build (e.g. photocraft/ai-webgpu).
 #
 # Needs: cargo; nfpm for deb/rpm (https://nfpm.goreleaser.com). By default AppImage tooling
 # is downloaded at verified pins into $CARGO_TARGET_DIR. Build on an old distro (CI: Ubuntu 22.04,
@@ -50,9 +51,9 @@ echo "==> PhotoCraft $VERSION for Linux $ARCH ($FORMATS)"
 
 if [ "$SKIP_BUILD" = 0 ]; then
   if [ -n "${CROSS_TARGET:-}" ]; then
-    (cd "$ROOT" && cargo build --release --locked -p photocraft -p photocraft-cli --features heif --target "$CROSS_TARGET")
+    (cd "$ROOT" && cargo build --release --locked -p photocraft -p photocraft-cli --features "heif${PHOTOCRAFT_FEATURES:+,$PHOTOCRAFT_FEATURES}" --target "$CROSS_TARGET")
   else
-    (cd "$ROOT" && cargo build --release --locked -p photocraft -p photocraft-cli --features heif)
+    (cd "$ROOT" && cargo build --release --locked -p photocraft -p photocraft-cli --features "heif${PHOTOCRAFT_FEATURES:+,$PHOTOCRAFT_FEATURES}")
   fi
 fi
 BIN="$CARGO_TARGET_DIR/${CROSS_TARGET:+$CROSS_TARGET/}release"
@@ -63,6 +64,11 @@ rm -rf "$WORK"
 # ---- stage an FHS tree (shared by every format) -------------------------------------------------
 install -Dm755 "$BIN/photocraft" "$STAGE/usr/bin/photocraft"
 install -Dm755 "$BIN/photocraft-cli" "$STAGE/usr/bin/photocraft-cli"
+# Shared libraries the build put beside the binaries (ONNX Runtime's GPU backend with
+# PHOTOCRAFT_FEATURES=photocraft/ai-webgpu); the binaries find them through an $ORIGIN/../lib rpath.
+for lib in "$BIN"/*.so "$BIN"/*.so.*; do
+  [ -f "$lib" ] && install -Dm644 "$lib" "$STAGE/usr/lib/$(basename "$lib")"
+done
 "${CROSS_COMPILE:-}strip" "$STAGE/usr/bin/photocraft" "$STAGE/usr/bin/photocraft-cli" 2>/dev/null || true
 install -Dm644 "$HERE/$APP_ID.desktop" "$STAGE/usr/share/applications/$APP_ID.desktop"
 install -Dm644 "$HERE/$APP_ID.mime.xml" "$STAGE/usr/share/mime/packages/$APP_ID.xml"

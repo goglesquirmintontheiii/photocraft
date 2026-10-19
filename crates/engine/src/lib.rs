@@ -11,6 +11,7 @@ pub mod actions_cmds;
 pub mod actions_edit_cmds;
 pub mod adjust_cmds;
 pub mod adjust_params;
+pub mod ai;
 pub mod align_cmds;
 mod allocation;
 pub mod analysis_cmds;
@@ -507,6 +508,8 @@ pub struct Session {
     /// Object Selection's Object Finder results (#4087), shared by the hover preview and the
     /// click that commits it; valid while the pixels are unchanged.
     pub object_finder: smartselect_cmds::ObjectFinderCache,
+    /// The local AI model manager ([`Session::set_models`]); `None` without one (tests, the web).
+    pub(crate) models: Option<photocraft_ml::Manager>,
     /// A finished live stroke offered to the `paint.stroke` / `paint.pencil` that commits it
     /// ([`Session::offer_live_stroke`]).
     pub(crate) live_commit: Option<brush_cmds::LiveCommit>,

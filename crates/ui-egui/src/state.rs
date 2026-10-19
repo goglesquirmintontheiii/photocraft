@@ -116,6 +116,12 @@ pub enum Tool {
     Sponge,
     QuickSelection,
     ObjectSelection,
+    /// Object Selection with a local AI model (Edit › Preferences › AI Models).
+    AiObjectSelection,
+    /// The Generative Brushes (one toolbar button, a box of brushes beside it): a local AI
+    /// model fills what the stroke covers when it ends.
+    GenerativeRemoval,
+    ReflectionRemoval,
     Pen,
     FreeformPen,
     CurvaturePen,
@@ -138,7 +144,7 @@ pub enum Tool {
 }
 
 impl Tool {
-    pub const ALL: [Tool; 67] = [
+    pub const ALL: [Tool; 70] = [
         Tool::Move,
         Tool::Artboard,
         Tool::RectMarquee,
@@ -189,6 +195,9 @@ impl Tool {
         Tool::Sponge,
         Tool::QuickSelection,
         Tool::ObjectSelection,
+        Tool::AiObjectSelection,
+        Tool::GenerativeRemoval,
+        Tool::ReflectionRemoval,
         Tool::Pen,
         Tool::FreeformPen,
         Tool::CurvaturePen,
@@ -263,6 +272,9 @@ impl Tool {
             Tool::Sponge => "Sponge Tool",
             Tool::QuickSelection => "Quick Selection Tool",
             Tool::ObjectSelection => "Object Selection Tool",
+            Tool::AiObjectSelection => "AI Object Selection Tool",
+            Tool::GenerativeRemoval => "Generative Removal Brush Tool",
+            Tool::ReflectionRemoval => "Reflection Removal Brush Tool",
             Tool::Pen => "Pen Tool",
             Tool::FreeformPen => "Freeform Pen Tool",
             Tool::CurvaturePen => "Curvature Pen Tool",
@@ -302,6 +314,8 @@ impl Tool {
                 | Tool::Eraser
                 | Tool::BackgroundEraser
                 | Tool::Remove
+                | Tool::GenerativeRemoval
+                | Tool::ReflectionRemoval
                 | Tool::SpotHealing
                 | Tool::Healing
                 | Tool::CloneStamp
@@ -339,7 +353,9 @@ impl Tool {
             // In the Marquee flyout, but M cycles only the Rectangular and Elliptical Marquee.
             Tool::SingleRowMarquee | Tool::SingleColumnMarquee => '\0',
             Tool::Dodge | Tool::Burn | Tool::Sponge => 'O',
-            Tool::QuickSelection | Tool::ObjectSelection => 'W',
+            Tool::QuickSelection | Tool::ObjectSelection | Tool::AiObjectSelection => 'W',
+            // Chosen from the Generative Brush box.
+            Tool::GenerativeRemoval | Tool::ReflectionRemoval => '\0',
             Tool::Pen | Tool::FreeformPen | Tool::CurvaturePen | Tool::AddAnchorPoint | Tool::DeleteAnchorPoint | Tool::ConvertPoint => 'P',
             Tool::PathSelection | Tool::DirectSelection => 'A',
             Tool::Rectangle | Tool::EllipseShape | Tool::Triangle | Tool::Polygon | Tool::Line | Tool::CustomShape => 'U',
@@ -519,6 +535,18 @@ pub struct ToolOptions {
     /// Remove tool: each stroke is filled when released (Photoshop's default). Off, the strokes
     /// collect as a tint on the canvas and ↩ applies them together (Esc drops them).
     pub remove_after_each_stroke: bool,
+    /// AI Object Selection's model (an installed model's id; empty = the best one enabled).
+    #[serde(default)]
+    pub ai_select_model: String,
+    /// Generative Removal Brush's model (empty = the best one enabled).
+    #[serde(default)]
+    pub gen_removal_model: String,
+    /// Reflection Removal Brush's model (empty = the best one enabled).
+    #[serde(default)]
+    pub reflection_model: String,
+    /// The Generative Brushes: the fill goes to a new layer above the target.
+    #[serde(default)]
+    pub gen_new_layer: bool,
     pub feather: f32,
     /// linear | radial | angle | reflected | diamond
     pub gradient_style: String,
@@ -771,6 +799,10 @@ impl Default for ToolOptions {
             object_finder: true,
             remove_new_layer: false,
             remove_after_each_stroke: true,
+            ai_select_model: String::new(),
+            gen_removal_model: String::new(),
+            reflection_model: String::new(),
+            gen_new_layer: false,
             feather: 0.0,
             gradient_style: "linear".into(),
             gradient_reverse: false,
@@ -1460,7 +1492,10 @@ mod tests {
         assert!(!Tool::RedEye.is_brushlike());
         assert_eq!(Tool::from_name("patternStamp"), Some(Tool::PatternStamp));
         assert_eq!(Tool::from_name("Pattern Stamp Tool"), Some(Tool::PatternStamp));
-        assert_eq!(Tool::ALL.len(), 67);
+        assert_eq!(Tool::ALL.len(), 70);
+        assert_eq!(Tool::from_name("AI Object Selection Tool"), Some(Tool::AiObjectSelection));
+        assert_eq!(Tool::from_name("generativeRemoval"), Some(Tool::GenerativeRemoval));
+        assert_eq!(Tool::ReflectionRemoval.key(), '\0', "picked from the Generative Brush box");
         assert_eq!(Tool::from_name("Vertical Type Mask Tool"), Some(Tool::VerticalTypeMask));
         assert_eq!(Tool::from_name("addAnchorPoint"), Some(Tool::AddAnchorPoint));
         assert_eq!(Tool::from_name("Delete Anchor Point Tool"), Some(Tool::DeleteAnchorPoint));

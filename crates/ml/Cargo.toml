@@ -1,6 +1,6 @@
 [package]
 name = "photocraft-ml"
-description = "Local AI model manager: the recommended-model catalog, installed models on disk, downloads and imports (Hugging Face, Civitai, URLs, files)"
+description = "Local AI models: the recommended-model catalog, installed models on disk, downloads and imports (Hugging Face, Civitai, URLs, files), and running them (ONNX Runtime)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,6 +8,18 @@ rust-version.workspace = true
 
 [lints]
 workspace = true
+
+[features]
+# Runs models with ONNX Runtime, linked in (the `ort` crate downloads it while building).
+onnx = ["dep:ort", "dep:half", "ort/download-binaries", "ort/copy-dylibs", "ort/tls-rustls"]
+# Runs models with an ONNX Runtime shared library found at run time (PHOTOCRAFT_ONNXRUNTIME, or
+# beside the executable). For development machines that can't download the build-time binaries.
+onnx-dynamic = ["dep:ort", "dep:half", "ort/load-dynamic"]
+# GPU execution providers (each needs `onnx` or `onnx-dynamic`): DirectML on Windows, WebGPU
+# (Vulkan through Dawn) or CUDA on Linux.
+directml = ["ort?/directml"]
+webgpu = ["ort?/webgpu"]
+cuda = ["ort?/cuda"]
 
 [dependencies]
 serde = { workspace = true }
@@ -18,3 +30,5 @@ sha2 = "0.10"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 ureq = { version = "3", default-features = false, features = ["rustls", "gzip"] }
+ort = { version = "=2.0.0-rc.14", optional = true, default-features = false, features = ["std", "half", "api-24"] }
+half = { version = "2", optional = true }

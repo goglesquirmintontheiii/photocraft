@@ -4025,7 +4025,7 @@ layerLabel	No Color	Sem cor
 	AI	IA
 	AI Models…	Modelos de IA…
 	AI models run in the desktop app. Download PhotoCraft for your computer to use them.	Os modelos de IA funcionam no aplicativo para desktop. Baixe o PhotoCraft para o seu computador para usá-los.
-	AI…	IA…
+	AI Models	Modelos de IA
 	Add a model from a file or a link	Adicionar um modelo de um arquivo ou link
 	Cancelled	Cancelado
 	Choose Files…	Escolher arquivos…
@@ -4065,3 +4065,30 @@ layerLabel	No Color	Sem cor
 	{done} of {total}	{done} de {total}
 	{n} installed	{n} instalados
 	{n} to download	{n} para baixar
+
+# AI Object Selection, the Generative Brushes, AI Models accounts
+	AI Object Selection found nothing there — try a box around the object	A seleção de objeto com IA não encontrou nada aí — desenhe uma caixa ao redor do objeto
+	Accounts	Contas
+	Also in {sections}	Também em {sections}
+	Choose one or more uses, or paste a link to guess them.	Escolha um ou mais usos, ou cole um link para adivinhá-los.
+	Download a model in Edit › Preferences › AI Models	Baixe um modelo em Editar › Preferências › Modelos de IA
+	Drag a box around the object, or click it	Arraste uma caixa ao redor do objeto ou clique nele
+	Generative Brush	Pincel generativo
+	Get Models…	Obter modelos…
+	Get a token	Obter um token
+	Guessed from the link. Click a use to change it.	Deduzido do link. Clique em um uso para alterá-lo.
+	Hide the token	Ocultar o token
+	Model:	Modelo:
+	No {kind} model yet. Download one in Edit › Preferences › AI Models.	Ainda não há modelo de {kind}. Baixe um em Editar › Preferências › Modelos de IA.
+	Not signed in	Não conectado
+	Paint over the reflection	Pinte sobre o reflexo
+	Paint over what to remove	Pinte sobre o que deseja remover
+	Rename this model	Renomear este modelo
+	Show the token	Mostrar o token
+	Some models need you to sign in before they download. Paste an access token from your account; it's kept on this computer and sent only to its own site.	Alguns modelos exigem login antes do download. Cole um token de acesso da sua conta; ele fica neste computador e só é enviado ao próprio site.
+	This build can't run AI models	Esta versão não consegue executar modelos de IA
+	{n} signed in	{n} conectado(s)
+	AI Object Selection Tool	Ferramenta Seleção de objeto com IA
+	Generative Removal Brush Tool	Pincel Remoção generativa
+	Reflection Removal Brush Tool	Pincel Remoção de reflexos
+	API key	Chave de API

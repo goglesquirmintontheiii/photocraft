@@ -24,6 +24,7 @@ use crate::commands::{CommandSpec, blend_from_str};
 use crate::{EngineError, Result, Session};
 
 mod content_aware_move;
+mod generative;
 mod patch;
 mod pattern_stamp;
 mod periodic;
@@ -1361,6 +1362,30 @@ pub fn specs() -> Vec<CommandSpec> {
             ),
             enabled: has_pixel_layer,
             run: remove::remove,
+            journal: true,
+        },
+        CommandSpec {
+            id: "paint.generativeRemoval",
+            label: "Generative Removal",
+            menu: &[],
+            shortcut: None,
+            params: brush_params!(
+                r#","strokes":[[[x,y,pressure?],…],…]? (several strokes filled together; else "points"),"model":id?=best enabled Generative Removal model (see ai.models),"closeLoops":bool=true,"sampleAllLayers":bool=false,"newLayer":bool=false → {"damage","layer"?} (a background job: a local AI model fills what the strokes cover)"#
+            ),
+            enabled: generative::removal_enabled,
+            run: generative::generative_removal,
+            journal: true,
+        },
+        CommandSpec {
+            id: "paint.reflectionRemoval",
+            label: "Reflection Removal",
+            menu: &[],
+            shortcut: None,
+            params: brush_params!(
+                r#","strokes":[[[x,y,pressure?],…],…]?,"model":id?=best enabled Reflection Removal model (see ai.models),"closeLoops":bool=false,"sampleAllLayers":bool=false,"newLayer":bool=false → {"damage","layer"?} (a background job: a local AI model removes the reflection where the strokes go)"#
+            ),
+            enabled: generative::reflection_enabled,
+            run: generative::reflection_removal,
             journal: true,
         },
         CommandSpec {

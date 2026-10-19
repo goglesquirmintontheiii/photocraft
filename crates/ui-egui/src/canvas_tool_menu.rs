@@ -315,6 +315,7 @@ pub fn applies(tool: Tool) -> bool {
             | Tool::MagneticLasso
             | Tool::MagicWand
             | Tool::ObjectSelection
+            | Tool::AiObjectSelection
     ) || path_menu(tool)
 }
 

@@ -3935,7 +3935,7 @@ curves	Smooth	Εξομάλυνση
 	AI	ΤΝ
 	AI Models…	Μοντέλα ΤΝ…
 	AI models run in the desktop app. Download PhotoCraft for your computer to use them.	Τα μοντέλα ΤΝ λειτουργούν στην εφαρμογή υπολογιστή. Κατεβάστε το PhotoCraft για τον υπολογιστή σας για να τα χρησιμοποιήσετε.
-	AI…	ΤΝ…
+	AI Models	Μοντέλα ΤΝ
 	Add a model from a file or a link	Προσθήκη μοντέλου από αρχείο ή σύνδεσμο
 	Cancelled	Ακυρώθηκε
 	Choose Files…	Επιλογή αρχείων…
@@ -3975,3 +3975,30 @@ curves	Smooth	Εξομάλυνση
 	{done} of {total}	{done} από {total}
 	{n} installed	Εγκατεστημένα: {n}
 	{n} to download	Για λήψη: {n}
+
+# AI Object Selection, the Generative Brushes, AI Models accounts
+	AI Object Selection found nothing there — try a box around the object	Η Επιλογή αντικειμένου ΤΝ δεν βρήκε τίποτα εκεί — σχεδιάστε ένα πλαίσιο γύρω από το αντικείμενο
+	Accounts	Λογαριασμοί
+	Also in {sections}	Επίσης σε: {sections}
+	Choose one or more uses, or paste a link to guess them.	Επιλέξτε μία ή περισσότερες χρήσεις ή επικολλήστε έναν σύνδεσμο για να μαντέψει.
+	Download a model in Edit › Preferences › AI Models	Κατεβάστε ένα μοντέλο από Επεξεργασία › Προτιμήσεις › Μοντέλα ΤΝ
+	Drag a box around the object, or click it	Σύρετε ένα πλαίσιο γύρω από το αντικείμενο ή κάντε κλικ πάνω του
+	Generative Brush	Παραγωγικό πινέλο
+	Get Models…	Λήψη μοντέλων…
+	Get a token	Λήψη διακριτικού
+	Guessed from the link. Click a use to change it.	Μαντεύτηκε από τον σύνδεσμο. Κάντε κλικ σε μια χρήση για αλλαγή.
+	Hide the token	Απόκρυψη διακριτικού
+	Model:	Μοντέλο:
+	No {kind} model yet. Download one in Edit › Preferences › AI Models.	Δεν υπάρχει ακόμη μοντέλο για {kind}. Κατεβάστε ένα από Επεξεργασία › Προτιμήσεις › Μοντέλα ΤΝ.
+	Not signed in	Χωρίς σύνδεση
+	Paint over the reflection	Βάψτε πάνω από την αντανάκλαση
+	Paint over what to remove	Βάψτε πάνω από ό,τι θέλετε να αφαιρεθεί
+	Rename this model	Μετονομασία αυτού του μοντέλου
+	Show the token	Εμφάνιση διακριτικού
+	Some models need you to sign in before they download. Paste an access token from your account; it's kept on this computer and sent only to its own site.	Ορισμένα μοντέλα ζητούν σύνδεση πριν από τη λήψη. Επικολλήστε ένα διακριτικό πρόσβασης από τον λογαριασμό σας· μένει σε αυτόν τον υπολογιστή και στέλνεται μόνο στον δικό του ιστότοπο.
+	This build can't run AI models	Αυτή η έκδοση δεν μπορεί να εκτελέσει μοντέλα ΤΝ
+	{n} signed in	Συνδεδεμένοι: {n}
+	AI Object Selection Tool	Εργαλείο Επιλογή αντικειμένου ΤΝ
+	Generative Removal Brush Tool	Πινέλο Παραγωγική αφαίρεση
+	Reflection Removal Brush Tool	Πινέλο Αφαίρεση αντανακλάσεων
+	API key	Κλειδί API

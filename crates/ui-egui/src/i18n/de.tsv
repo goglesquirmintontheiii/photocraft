@@ -3235,7 +3235,7 @@ curves	Smooth	Glätten
 	AI	KI
 	AI Models…	KI-Modelle…
 	AI models run in the desktop app. Download PhotoCraft for your computer to use them.	KI-Modelle laufen in der Desktop-App. Laden Sie PhotoCraft für Ihren Computer herunter, um sie zu nutzen.
-	AI…	KI…
+	AI Models	KI-Modelle
 	Add a model from a file or a link	Modell aus einer Datei oder über einen Link hinzufügen
 	Cancelled	Abgebrochen
 	Choose Files…	Dateien wählen…
@@ -3276,3 +3276,30 @@ curves	Smooth	Glätten
 	{done} of {total}	{done} von {total}
 	{n} installed	{n} installiert
 	{n} to download	{n} zum Herunterladen
+
+# AI Object Selection, the Generative Brushes, AI Models accounts
+	AI Object Selection found nothing there — try a box around the object	KI-Objektauswahl hat dort nichts gefunden – ziehen Sie einen Rahmen um das Objekt
+	Accounts	Konten
+	Also in {sections}	Auch in {sections}
+	Choose one or more uses, or paste a link to guess them.	Wählen Sie einen oder mehrere Zwecke, oder fügen Sie einen Link ein, um sie zu erraten.
+	Download a model in Edit › Preferences › AI Models	Laden Sie unter Bearbeiten › Voreinstellungen › KI-Modelle ein Modell herunter
+	Drag a box around the object, or click it	Ziehen Sie einen Rahmen um das Objekt oder klicken Sie darauf
+	Generative Brush	Generativer Pinsel
+	Get Models…	Modelle holen…
+	Get a token	Token holen
+	Guessed from the link. Click a use to change it.	Aus dem Link erraten. Klicken Sie auf einen Zweck, um ihn zu ändern.
+	Hide the token	Token ausblenden
+	Model:	Modell:
+	No {kind} model yet. Download one in Edit › Preferences › AI Models.	Noch kein {kind}-Modell. Laden Sie eines unter Bearbeiten › Voreinstellungen › KI-Modelle herunter.
+	Not signed in	Nicht angemeldet
+	Paint over the reflection	Über die Spiegelung malen
+	Paint over what to remove	Über das Entfernende malen
+	Rename this model	Dieses Modell umbenennen
+	Show the token	Token anzeigen
+	Some models need you to sign in before they download. Paste an access token from your account; it's kept on this computer and sent only to its own site.	Manche Modelle verlangen eine Anmeldung vor dem Herunterladen. Fügen Sie ein Zugriffstoken aus Ihrem Konto ein; es bleibt auf diesem Computer und wird nur an die eigene Website gesendet.
+	This build can't run AI models	Dieser Build kann keine KI-Modelle ausführen
+	{n} signed in	{n} angemeldet
+	AI Object Selection Tool	KI-Objektauswahl-Werkzeug
+	Generative Removal Brush Tool	Pinsel „Generatives Entfernen“
+	Reflection Removal Brush Tool	Pinsel „Spiegelungen entfernen“
+	API key	API-Schlüssel

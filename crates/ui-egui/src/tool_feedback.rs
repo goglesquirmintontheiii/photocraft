@@ -47,6 +47,7 @@ pub fn is_selection_tool(tool: Tool) -> bool {
             | Tool::MagicWand
             | Tool::QuickSelection
             | Tool::ObjectSelection
+            | Tool::AiObjectSelection
     )
 }
 
@@ -63,7 +64,7 @@ pub fn selection_mode(tool: Tool, bar: u8, m: egui::Modifiers) -> &'static str {
             }
         }
         // Object Selection: ⌥ subtracts, ⇧ adds (see `retouch_ui::finish_object_selection`).
-        Tool::ObjectSelection => {
+        Tool::ObjectSelection | Tool::AiObjectSelection => {
             if m.alt {
                 "subtract"
             } else if m.shift {

@@ -13,6 +13,8 @@ use serde_json::{Value, json};
 use crate::commands::CommandSpec;
 use crate::{EngineError, Result, Session};
 
+mod ai_select;
+
 fn has_doc(s: &Session) -> std::result::Result<(), String> {
     s.active().map(|_| ()).ok_or_else(|| "no document open".into())
 }
@@ -537,6 +539,9 @@ pub fn specs() -> Vec<CommandSpec> {
             focus_area
         ),
     ]
+    .into_iter()
+    .chain(ai_select::specs())
+    .collect()
 }
 
 #[cfg(test)]

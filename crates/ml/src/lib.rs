@@ -7,11 +7,13 @@
 //!   other PhotoCraft files, with a `models.json` manifest (enabled, source, size on disk).
 //! - [`source`]: what an import link points at (a Hugging Face file or repository, a Civitai
 //!   model, any other URL) and how to turn it into download URLs.
+//! - [`accounts`]: Hugging Face and Civitai tokens for gated downloads.
 //! - [`manager`]: the thread-safe front the UI drives. Downloads and imports run on worker
 //!   threads and report progress, bytes, elapsed time and an ETA.
 //!
-//! Inference (running the models) comes with the first tool that uses one; [`available`] is
-//! what those tools' model dropdowns list: installed models that are enabled, best first.
+//! - [`infer`]: running them (selection masks, subject mattes, fills), with ONNX Runtime when the
+//!   crate is built with `onnx` or `onnx-dynamic`. [`available`] is what the tools' model
+//!   dropdowns list: installed models that are enabled for that use, best first.
 //!
 //! Never-crash: every operation returns [`Error`]; file contents, manifests, HTTP responses and
 //! links are treated as hostile input.
@@ -19,15 +21,18 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
+pub mod accounts;
 pub mod catalog;
 mod http;
+pub mod infer;
 pub mod kind;
 pub mod manager;
 pub mod source;
 pub mod store;
 
+pub use accounts::Tokens;
 pub use catalog::{CatalogFile, CatalogModel, RECOMMENDED};
-pub use kind::ModelKind;
+pub use kind::{ModelKind, detect as detect_kinds};
 pub use manager::{Job, JobId, JobKind, JobState, Manager};
 pub use store::{InstalledModel, ModelSource};
 
@@ -59,11 +64,11 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// Installed, enabled models of `kind`, the most accurate first (catalog order, then imports by
 /// name): what a tool's model dropdown lists.
 pub fn available(installed: &[InstalledModel], kind: ModelKind) -> Vec<InstalledModel> {
-    let rank = |m: &InstalledModel| match &m.source {
-        ModelSource::Catalog { id } => RECOMMENDED.iter().position(|c| c.id == id).unwrap_or(usize::MAX - 1),
-        _ => usize::MAX,
+    let rank = |m: &InstalledModel| match &m.catalog_id {
+        Some(id) => RECOMMENDED.iter().position(|c| c.id == id).unwrap_or(usize::MAX - 1),
+        None => usize::MAX,
     };
-    let mut out: Vec<InstalledModel> = installed.iter().filter(|m| m.enabled && m.kind == kind).cloned().collect();
+    let mut out: Vec<InstalledModel> = installed.iter().filter(|m| m.enabled_for(kind)).cloned().collect();
     out.sort_by(|a, b| rank(a).cmp(&rank(b)).then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase())));
     out
 }

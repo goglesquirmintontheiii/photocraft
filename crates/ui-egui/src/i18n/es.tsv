@@ -4197,7 +4197,7 @@ navigator	Zoom	Zoom
 	AI	IA
 	AI Models…	Modelos de IA…
 	AI models run in the desktop app. Download PhotoCraft for your computer to use them.	Los modelos de IA funcionan en la aplicación de escritorio. Descarga PhotoCraft para tu ordenador para usarlos.
-	AI…	IA…
+	AI Models	Modelos de IA
 	Add a model from a file or a link	Añadir un modelo desde un archivo o un enlace
 	Cancelled	Cancelado
 	Choose Files…	Elegir archivos…
@@ -4237,3 +4237,30 @@ navigator	Zoom	Zoom
 	{done} of {total}	{done} de {total}
 	{n} installed	{n} instalados
 	{n} to download	{n} para descargar
+
+# AI Object Selection, the Generative Brushes, AI Models accounts
+	AI Object Selection found nothing there — try a box around the object	La selección de objetos con IA no encontró nada ahí — traza un recuadro alrededor del objeto
+	Accounts	Cuentas
+	Also in {sections}	También en {sections}
+	Choose one or more uses, or paste a link to guess them.	Elige uno o más usos, o pega un enlace para adivinarlos.
+	Download a model in Edit › Preferences › AI Models	Descarga un modelo en Edición › Preferencias › Modelos de IA
+	Drag a box around the object, or click it	Arrastra un recuadro alrededor del objeto o haz clic en él
+	Generative Brush	Pincel generativo
+	Get Models…	Obtener modelos…
+	Get a token	Obtener un token
+	Guessed from the link. Click a use to change it.	Deducido del enlace. Haz clic en un uso para cambiarlo.
+	Hide the token	Ocultar el token
+	Model:	Modelo:
+	No {kind} model yet. Download one in Edit › Preferences › AI Models.	Aún no hay ningún modelo de {kind}. Descarga uno en Edición › Preferencias › Modelos de IA.
+	Not signed in	Sin iniciar sesión
+	Paint over the reflection	Pinta sobre el reflejo
+	Paint over what to remove	Pinta sobre lo que quieras eliminar
+	Rename this model	Cambiar el nombre de este modelo
+	Show the token	Mostrar el token
+	Some models need you to sign in before they download. Paste an access token from your account; it's kept on this computer and sent only to its own site.	Algunos modelos requieren iniciar sesión antes de descargarse. Pega un token de acceso de tu cuenta; se guarda en este ordenador y solo se envía a su propio sitio.
+	This build can't run AI models	Esta versión no puede ejecutar modelos de IA
+	{n} signed in	{n} con sesión iniciada
+	AI Object Selection Tool	Herramienta Selección de objetos con IA
+	Generative Removal Brush Tool	Pincel Eliminación generativa
+	Reflection Removal Brush Tool	Pincel Eliminación de reflejos
+	API key	Clave de API

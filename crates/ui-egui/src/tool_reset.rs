@@ -108,6 +108,7 @@ fn is_selection_tool(tool: Tool) -> bool {
             | Tool::MagicWand
             | Tool::QuickSelection
             | Tool::ObjectSelection
+            | Tool::AiObjectSelection
     )
 }
 
@@ -150,6 +151,9 @@ pub fn option_keys(tool: Tool) -> &'static [&'static str] {
         Tool::MagicWand => reset!(tolerance, anti_alias, contiguous, sample_all_layers),
         Tool::QuickSelection => reset!(sample_all_layers, enhance_edge),
         Tool::ObjectSelection => reset!(sample_all_layers, enhance_edge, object_finder),
+        Tool::AiObjectSelection => reset!(sample_all_layers, ai_select_model),
+        Tool::GenerativeRemoval => reset!(sample_all_layers, gen_removal_model, gen_new_layer),
+        Tool::ReflectionRemoval => reset!(sample_all_layers, reflection_model, gen_new_layer),
         Tool::Crop => reset!(
             crop_ratio,
             crop_delete,

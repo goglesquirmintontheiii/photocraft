@@ -815,6 +815,8 @@ pub(crate) fn freehand_tool(tool: Tool) -> bool {
             | Tool::BackgroundEraser
             | Tool::HistoryBrush
             | Tool::Remove
+            | Tool::GenerativeRemoval
+            | Tool::ReflectionRemoval
             | Tool::SpotHealing
             | Tool::Healing
             | Tool::CloneStamp
@@ -4970,6 +4972,7 @@ fn draw_drag_preview(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &View
     draw_tool_state(app, painter, xf, painter.ctx().input(|i| i.pointer.hover_pos()));
     // Remove strokes waiting for ↩ stay tinted between drags.
     crate::retouch_ui::draw_remove_pending(app, painter, xf);
+    crate::ai_tools_ui::draw_pending(app, painter, xf);
     let Some(d) = &app.drag else {
         app.trail = None;
         return;
@@ -5001,6 +5004,8 @@ fn draw_drag_preview(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &View
                 Tool::QuickSelection => Color32::from_white_alpha(40),
                 // The Remove Tool tints what it will remove, like Photoshop's.
                 Tool::Remove => crate::theme::Tokens::get(painter.ctx()).danger.gamma_multiply(0.45),
+                // The Generative Brushes tint what the model will fill in the accent colour.
+                Tool::GenerativeRemoval | Tool::ReflectionRemoval => crate::theme::Tokens::get(painter.ctx()).accent.gamma_multiply(0.45),
                 // Photoshop paints the area to heal in half-opaque dark grey; a faint white trail
                 // barely showed on light pixels (#7342).
                 Tool::SpotHealing => Color32::from_black_alpha(128),
@@ -5028,7 +5033,7 @@ fn draw_drag_preview(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &View
         }
         // Nothing selected yet: no outline, as the release would deselect.
         Tool::RectMarquee | Tool::EllipseMarquee if marquee.is_none() => {}
-        Tool::RectMarquee | Tool::EllipseMarquee | Tool::ObjectSelection => {
+        Tool::RectMarquee | Tool::EllipseMarquee | Tool::ObjectSelection | Tool::AiObjectSelection => {
             // Marching ants, visible on any pixels (#172): built in document space and mapped
             // corner by corner, so a rotated view shows them where the release commits (#2512).
             let pts = marquee_drag_ants(d, xf, marquee);
@@ -5907,6 +5912,7 @@ pub(crate) fn finish_gesture(app: &mut PhotocraftApp, d: Drag) {
     }
     match d.tool {
         Tool::ObjectSelection => crate::retouch_ui::finish_object_selection(app, d.start, [end[0], end[1]], d.modifiers),
+        Tool::AiObjectSelection => crate::ai_tools_ui::finish_ai_object_selection(app, d.start, [end[0], end[1]], d.modifiers),
         Tool::FreeformPen => crate::vector_ui::freeform_finish(app, &d.points, d.lasso.as_ref().map_or(&[], |l| l.straight())),
         // Photoshop: a click without dragging opens Create Rectangle / Ellipse / … instead.
         t if crate::vector_ui::is_shape_tool(t)

@@ -3995,7 +3995,7 @@ curves	Smooth	Vloeiend maken
 	AI	AI
 	AI Models…	AI-modellen…
 	AI models run in the desktop app. Download PhotoCraft for your computer to use them.	AI-modellen werken in de desktop-app. Download PhotoCraft voor je computer om ze te gebruiken.
-	AI…	AI…
+	AI Models	AI-modellen
 	Add a model from a file or a link	Een model toevoegen uit een bestand of via een link
 	Cancelled	Geannuleerd
 	Choose Files…	Bestanden kiezen…
@@ -4035,3 +4035,30 @@ curves	Smooth	Vloeiend maken
 	{done} of {total}	{done} van {total}
 	{n} installed	{n} geïnstalleerd
 	{n} to download	{n} te downloaden
+
+# AI Object Selection, the Generative Brushes, AI Models accounts
+	AI Object Selection found nothing there — try a box around the object	AI-objectselectie heeft daar niets gevonden — trek een kader rond het object
+	Accounts	Accounts
+	Also in {sections}	Ook in {sections}
+	Choose one or more uses, or paste a link to guess them.	Kies een of meer toepassingen, of plak een link om ze te raden.
+	Download a model in Edit › Preferences › AI Models	Download een model via Bewerken › Voorkeuren › AI-modellen
+	Drag a box around the object, or click it	Sleep een kader rond het object, of klik erop
+	Generative Brush	Generatief penseel
+	Get Models…	Modellen ophalen…
+	Get a token	Token ophalen
+	Guessed from the link. Click a use to change it.	Geraden uit de link. Klik op een toepassing om die te wijzigen.
+	Hide the token	Token verbergen
+	Model:	Model:
+	No {kind} model yet. Download one in Edit › Preferences › AI Models.	Nog geen {kind}-model. Download er een via Bewerken › Voorkeuren › AI-modellen.
+	Not signed in	Niet aangemeld
+	Paint over the reflection	Schilder over de reflectie
+	Paint over what to remove	Schilder over wat weg moet
+	Rename this model	Dit model hernoemen
+	Show the token	Token tonen
+	Some models need you to sign in before they download. Paste an access token from your account; it's kept on this computer and sent only to its own site.	Sommige modellen vragen je om je aan te melden voordat ze downloaden. Plak een toegangstoken van je account; het blijft op deze computer en wordt alleen naar de eigen site gestuurd.
+	This build can't run AI models	Deze versie kan geen AI-modellen uitvoeren
+	{n} signed in	{n} aangemeld
+	AI Object Selection Tool	Tool AI-objectselectie
+	Generative Removal Brush Tool	Penseel Generatief verwijderen
+	Reflection Removal Brush Tool	Penseel Reflecties verwijderen
+	API key	API-sleutel

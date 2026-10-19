@@ -38,9 +38,22 @@ pub(crate) fn absolutize(location: &str, base: &str) -> String {
 pub(crate) fn status_error(status: u16, url: &str) -> Error {
     let host = url.split_once("://").map_or(url, |(_, r)| r).split('/').next().unwrap_or("The server");
     match status {
-        401 | 403 => Error::Network(format!(
-            "{host} asked to sign in before downloading this model (it may be gated or need its licence accepted). Download it in your browser, then use Import › From a File."
-        )),
+        401 | 403 => {
+            let site = match crate::accounts::site_of(url) {
+                Some("huggingface") => Some("Hugging Face"),
+                Some(_) => Some("Civitai"),
+                None => None,
+            };
+            Error::Network(match site {
+                Some(name) if crate::accounts::has_token_for(url) => format!(
+                    "{host} turned down your {name} token for this model. It may be gated: accept its licence on its page while signed in, or check the token under Accounts at the bottom of AI Models."
+                ),
+                Some(name) => format!(
+                    "{host} asked to sign in before downloading this model. Add your {name} token under Accounts at the bottom of AI Models, or download it in your browser and use Import › From a File."
+                ),
+                None => format!("{host} asked to sign in before downloading this model. Download it in your browser, then use Import › From a File."),
+            })
+        }
         404 | 410 => Error::NotFound(format!("Nothing was found at that link on {host}.")),
         429 => Error::Network(format!("{host} is limiting downloads right now. Try again in a few minutes.")),
         s => Error::Network(format!("{host} answered with error {s}.")),
@@ -154,6 +167,10 @@ mod native {
             let mut req = agent().get(&url);
             if range_from > 0 {
                 req = req.header("Range", format!("bytes={range_from}-"));
+            }
+            // Per hop: a redirect to another server (a CDN) never gets the token.
+            if let Some(auth) = crate::accounts::authorization(&url) {
+                req = req.header("Authorization", auth);
             }
             let resp = req.call().map_err(net)?;
             let h = resp.headers();

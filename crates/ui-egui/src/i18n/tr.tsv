@@ -3965,7 +3965,7 @@ cameraData	Lens	Lens
 	AI	Yapay Zeka
 	AI Models…	Yapay Zeka Modelleri…
 	AI models run in the desktop app. Download PhotoCraft for your computer to use them.	Yapay zeka modelleri masaüstü uygulamasında çalışır. Kullanmak için bilgisayarınıza PhotoCraft'ı indirin.
-	AI…	Yapay Zeka…
+	AI Models	Yapay Zeka Modelleri
 	Add a model from a file or a link	Dosyadan veya bağlantıdan model ekle
 	Cancelled	İptal edildi
 	Choose Files…	Dosya Seç…
@@ -4005,3 +4005,30 @@ cameraData	Lens	Lens
 	{done} of {total}	{done} / {total}
 	{n} installed	{n} yüklü
 	{n} to download	{n} indirilebilir
+
+# AI Object Selection, the Generative Brushes, AI Models accounts
+	AI Object Selection found nothing there — try a box around the object	Yapay Zeka Nesne Seçimi orada bir şey bulamadı — nesnenin çevresine bir kutu çizin
+	Accounts	Hesaplar
+	Also in {sections}	Ayrıca: {sections}
+	Choose one or more uses, or paste a link to guess them.	Bir veya daha fazla kullanım seçin ya da tahmin için bir bağlantı yapıştırın.
+	Download a model in Edit › Preferences › AI Models	Düzen › Tercihler › Yapay Zeka Modelleri'nden bir model indirin
+	Drag a box around the object, or click it	Nesnenin çevresine kutu sürükleyin ya da nesneye tıklayın
+	Generative Brush	Üretken Fırça
+	Get Models…	Model Edin…
+	Get a token	Belirteç al
+	Guessed from the link. Click a use to change it.	Bağlantıdan tahmin edildi. Değiştirmek için bir kullanıma tıklayın.
+	Hide the token	Belirteci gizle
+	Model:	Model:
+	No {kind} model yet. Download one in Edit › Preferences › AI Models.	Henüz {kind} modeli yok. Düzen › Tercihler › Yapay Zeka Modelleri'nden indirin.
+	Not signed in	Oturum açılmadı
+	Paint over the reflection	Yansımanın üzerini boyayın
+	Paint over what to remove	Kaldırılacak yerin üzerini boyayın
+	Rename this model	Bu modeli yeniden adlandır
+	Show the token	Belirteci göster
+	Some models need you to sign in before they download. Paste an access token from your account; it's kept on this computer and sent only to its own site.	Bazı modeller indirilmeden önce oturum açmanızı ister. Hesabınızdaki erişim belirtecini yapıştırın; bu bilgisayarda saklanır ve yalnızca kendi sitesine gönderilir.
+	This build can't run AI models	Bu sürüm yapay zeka modellerini çalıştıramaz
+	{n} signed in	{n} oturum açık
+	AI Object Selection Tool	Yapay Zeka Nesne Seçimi Aracı
+	Generative Removal Brush Tool	Üretken Kaldırma Fırçası
+	Reflection Removal Brush Tool	Yansıma Kaldırma Fırçası
+	API key	API anahtarı

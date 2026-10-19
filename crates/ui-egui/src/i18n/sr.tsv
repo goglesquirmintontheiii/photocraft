@@ -4308,7 +4308,7 @@ shape	Appearance	Izgled
 	AI	AI
 	AI Models…	AI modeli…
 	AI models run in the desktop app. Download PhotoCraft for your computer to use them.	AI modeli rade u aplikaciji za računar. Preuzmite PhotoCraft za svoj računar da biste ih koristili.
-	AI…	AI…
+	AI Models	AI modeli
 	Add a model from a file or a link	Dodaj model iz datoteke ili sa linka
 	Cancelled	Otkazano
 	Choose Files…	Izaberi datoteke…
@@ -4348,3 +4348,30 @@ shape	Appearance	Izgled
 	{done} of {total}	{done} od {total}
 	{n} installed	Instalirano: {n}
 	{n} to download	Za preuzimanje: {n}
+
+# AI Object Selection, the Generative Brushes, AI Models accounts
+	AI Object Selection found nothing there — try a box around the object	AI izbor objekta tu nije ništa našao — nacrtajte okvir oko objekta
+	Accounts	Nalozi
+	Also in {sections}	Takođe u: {sections}
+	Choose one or more uses, or paste a link to guess them.	Izaberite jednu ili više namena ili nalepite link da ih pogodi.
+	Download a model in Edit › Preferences › AI Models	Preuzmite model u Uređivanje › Podešavanja › AI modeli
+	Drag a box around the object, or click it	Prevucite okvir oko objekta ili kliknite na njega
+	Generative Brush	Generativna četkica
+	Get Models…	Nabavi modele…
+	Get a token	Nabavi token
+	Guessed from the link. Click a use to change it.	Pogođeno iz linka. Kliknite na namenu da je promenite.
+	Hide the token	Sakrij token
+	Model:	Model:
+	No {kind} model yet. Download one in Edit › Preferences › AI Models.	Još nema modela za {kind}. Preuzmite ga u Uređivanje › Podešavanja › AI modeli.
+	Not signed in	Niste prijavljeni
+	Paint over the reflection	Prebojte odsjaj
+	Paint over what to remove	Prebojte ono što treba ukloniti
+	Rename this model	Preimenuj ovaj model
+	Show the token	Prikaži token
+	Some models need you to sign in before they download. Paste an access token from your account; it's kept on this computer and sent only to its own site.	Neki modeli traže prijavu pre preuzimanja. Nalepite pristupni token sa svog naloga; čuva se na ovom računaru i šalje se samo njegovom sajtu.
+	This build can't run AI models	Ova verzija ne može da pokreće AI modele
+	{n} signed in	Prijavljeno: {n}
+	AI Object Selection Tool	Alatka AI izbor objekta
+	Generative Removal Brush Tool	Četkica Generativno uklanjanje
+	Reflection Removal Brush Tool	Četkica Uklanjanje odsjaja
+	API key	API ključ

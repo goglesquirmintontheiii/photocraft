@@ -3722,7 +3722,7 @@ curves	Smooth	Làm mượt
 	AI	AI
 	AI Models…	Mô hình AI…
 	AI models run in the desktop app. Download PhotoCraft for your computer to use them.	Mô hình AI chạy trong ứng dụng máy tính. Hãy tải PhotoCraft cho máy tính của bạn để dùng chúng.
-	AI…	AI…
+	AI Models	Mô hình AI
 	Add a model from a file or a link	Thêm mô hình từ tệp hoặc liên kết
 	Cancelled	Đã hủy
 	Choose Files…	Chọn tệp…
@@ -3763,3 +3763,30 @@ curves	Smooth	Làm mượt
 	{done} of {total}	{done} / {total}
 	{n} installed	Đã cài {n}
 	{n} to download	{n} có thể tải
+
+# AI Object Selection, the Generative Brushes, AI Models accounts
+	AI Object Selection found nothing there — try a box around the object	Chọn đối tượng AI không tìm thấy gì ở đó — hãy kéo một khung quanh đối tượng
+	Accounts	Tài khoản
+	Also in {sections}	Cũng có trong {sections}
+	Choose one or more uses, or paste a link to guess them.	Chọn một hoặc nhiều mục đích, hoặc dán liên kết để tự đoán.
+	Download a model in Edit › Preferences › AI Models	Tải mô hình trong Sửa › Tùy chọn › Mô hình AI
+	Drag a box around the object, or click it	Kéo một khung quanh đối tượng, hoặc nhấp vào nó
+	Generative Brush	Cọ tạo sinh
+	Get Models…	Lấy mô hình…
+	Get a token	Lấy mã truy cập
+	Guessed from the link. Click a use to change it.	Đã đoán từ liên kết. Nhấp vào một mục đích để đổi.
+	Hide the token	Ẩn mã truy cập
+	Model:	Mô hình:
+	No {kind} model yet. Download one in Edit › Preferences › AI Models.	Chưa có mô hình {kind}. Hãy tải trong Sửa › Tùy chọn › Mô hình AI.
+	Not signed in	Chưa đăng nhập
+	Paint over the reflection	Tô lên phần phản chiếu
+	Paint over what to remove	Tô lên phần cần xóa
+	Rename this model	Đổi tên mô hình này
+	Show the token	Hiện mã truy cập
+	Some models need you to sign in before they download. Paste an access token from your account; it's kept on this computer and sent only to its own site.	Một số mô hình cần đăng nhập trước khi tải. Dán mã truy cập từ tài khoản của bạn; mã được lưu trên máy này và chỉ gửi tới trang của nó.
+	This build can't run AI models	Bản dựng này không chạy được mô hình AI
+	{n} signed in	Đã đăng nhập {n}
+	AI Object Selection Tool	Công cụ Chọn đối tượng AI
+	Generative Removal Brush Tool	Cọ Xóa tạo sinh
+	Reflection Removal Brush Tool	Cọ Xóa phản chiếu
+	API key	Khóa API

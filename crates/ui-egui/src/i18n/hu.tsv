@@ -4154,7 +4154,7 @@ cameraRaw	Yellow	Sárga
 	AI	MI
 	AI Models…	MI-modellek…
 	AI models run in the desktop app. Download PhotoCraft for your computer to use them.	Az MI-modellek az asztali alkalmazásban futnak. Használatukhoz töltse le a PhotoCraftot a számítógépére.
-	AI…	MI…
+	AI Models	MI-modellek
 	Add a model from a file or a link	Modell hozzáadása fájlból vagy hivatkozásból
 	Cancelled	Megszakítva
 	Choose Files…	Fájlok kiválasztása…
@@ -4194,3 +4194,30 @@ cameraRaw	Yellow	Sárga
 	{done} of {total}	{done} / {total}
 	{n} installed	{n} telepítve
 	{n} to download	{n} letölthető
+
+# AI Object Selection, the Generative Brushes, AI Models accounts
+	AI Object Selection found nothing there — try a box around the object	Az MI-objektumkijelölés nem talált ott semmit — rajzoljon keretet az objektum köré
+	Accounts	Fiókok
+	Also in {sections}	Itt is: {sections}
+	Choose one or more uses, or paste a link to guess them.	Válasszon egy vagy több felhasználást, vagy illesszen be egy hivatkozást a kitaláláshoz.
+	Download a model in Edit › Preferences › AI Models	Töltsön le egy modellt: Szerkesztés › Beállítások › MI-modellek
+	Drag a box around the object, or click it	Húzzon keretet az objektum köré, vagy kattintson rá
+	Generative Brush	Generatív ecset
+	Get Models…	Modellek beszerzése…
+	Get a token	Token beszerzése
+	Guessed from the link. Click a use to change it.	A hivatkozásból kitalálva. Kattintson egy felhasználásra a módosításhoz.
+	Hide the token	Token elrejtése
+	Model:	Modell:
+	No {kind} model yet. Download one in Edit › Preferences › AI Models.	Még nincs {kind} modell. Töltsön le egyet: Szerkesztés › Beállítások › MI-modellek.
+	Not signed in	Nincs bejelentkezve
+	Paint over the reflection	Fesse át a tükröződést
+	Paint over what to remove	Fesse át, amit el szeretne távolítani
+	Rename this model	A modell átnevezése
+	Show the token	Token megjelenítése
+	Some models need you to sign in before they download. Paste an access token from your account; it's kept on this computer and sent only to its own site.	Egyes modellek letöltése bejelentkezést igényel. Illessze be fiókja hozzáférési tokenjét; ezen a számítógépen marad, és csak a saját webhelyére kerül.
+	This build can't run AI models	Ez a változat nem tud MI-modelleket futtatni
+	{n} signed in	{n} bejelentkezve
+	AI Object Selection Tool	MI-objektumkijelölő eszköz
+	Generative Removal Brush Tool	Generatív eltávolítás ecset
+	Reflection Removal Brush Tool	Tükröződés eltávolítása ecset
+	API key	API-kulcs

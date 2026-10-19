@@ -3834,7 +3834,7 @@ curves	Smooth	Wygładź
 	AI	AI
 	AI Models…	Modele AI…
 	AI models run in the desktop app. Download PhotoCraft for your computer to use them.	Modele AI działają w aplikacji na komputer. Pobierz PhotoCraft na swój komputer, aby z nich korzystać.
-	AI…	AI…
+	AI Models	Modele AI
 	Add a model from a file or a link	Dodaj model z pliku lub linku
 	Cancelled	Anulowano
 	Choose Files…	Wybierz pliki…
@@ -3874,3 +3874,30 @@ curves	Smooth	Wygładź
 	{done} of {total}	{done} z {total}
 	{n} installed	Zainstalowane: {n}
 	{n} to download	Do pobrania: {n}
+
+# AI Object Selection, the Generative Brushes, AI Models accounts
+	AI Object Selection found nothing there — try a box around the object	Zaznaczanie obiektu AI nic tam nie znalazło — obrysuj obiekt prostokątem
+	Accounts	Konta
+	Also in {sections}	Także w: {sections}
+	Choose one or more uses, or paste a link to guess them.	Wybierz jedno lub więcej zastosowań albo wklej link, aby je odgadnąć.
+	Download a model in Edit › Preferences › AI Models	Pobierz model w Edycja › Preferencje › Modele AI
+	Drag a box around the object, or click it	Przeciągnij prostokąt wokół obiektu lub go kliknij
+	Generative Brush	Pędzel generatywny
+	Get Models…	Pobierz modele…
+	Get a token	Uzyskaj token
+	Guessed from the link. Click a use to change it.	Odgadnięto z linku. Kliknij zastosowanie, aby je zmienić.
+	Hide the token	Ukryj token
+	Model:	Model:
+	No {kind} model yet. Download one in Edit › Preferences › AI Models.	Brak jeszcze modelu: {kind}. Pobierz go w Edycja › Preferencje › Modele AI.
+	Not signed in	Niezalogowano
+	Paint over the reflection	Zamaluj odbicie
+	Paint over what to remove	Zamaluj to, co chcesz usunąć
+	Rename this model	Zmień nazwę tego modelu
+	Show the token	Pokaż token
+	Some models need you to sign in before they download. Paste an access token from your account; it's kept on this computer and sent only to its own site.	Niektóre modele wymagają zalogowania przed pobraniem. Wklej token dostępu ze swojego konta; jest przechowywany na tym komputerze i wysyłany tylko do jego witryny.
+	This build can't run AI models	Ta wersja nie może uruchamiać modeli AI
+	{n} signed in	Zalogowano: {n}
+	AI Object Selection Tool	Narzędzie Zaznaczanie obiektu AI
+	Generative Removal Brush Tool	Pędzel Usuwanie generatywne
+	Reflection Removal Brush Tool	Pędzel Usuwanie odbić
+	API key	Klucz API

@@ -1021,8 +1021,8 @@ pub const SECTIONS: [(&str, &str); 19] = [
     ("enhancedControls", "Enhanced Controls"),
     ("rawDefaults", "Camera Raw Defaults"),
     ("integrations", "Integrations"),
-    // Local AI models (Edit › Preferences › AI), drawn by the shell: no stored preferences.
-    ("ai", "AI"),
+    // Local AI models (Edit › Preferences › AI Models), drawn by the shell.
+    ("ai", "AI Models"),
 ];
 
 /// Preferences that nothing reads yet, so Edit › Preferences doesn't show them: a control that
@@ -2491,7 +2491,7 @@ pub fn specs() -> Vec<CommandSpec> {
         section!("edit.preferences.enhancedControls", "Enhanced Controls…"),
         section!("edit.preferences.rawDefaults", "Camera Raw…"),
         section!("edit.preferences.integrations", "Integrations…"),
-        section!("edit.preferences.ai", "AI…"),
+        section!("edit.preferences.ai", "AI Models…"),
         spec!(
             "edit.keyboardShortcuts",
             "Keyboard Shortcuts…",

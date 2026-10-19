@@ -63,7 +63,9 @@ if (-not $SkipBuild) {
   [Environment]::SetEnvironmentVariable($flagVar, '-C target-feature=+crt-static')
   # Fail the build (rather than warn) if the icon/VERSIONINFO can't be embedded.
   $env:PHOTOCRAFT_REQUIRE_WINRES = '1'
-  Invoke-Native "cargo build ($Target)" { cargo build --release --locked -p photocraft -p photocraft-cli --features heif --target $Target }
+  # PHOTOCRAFT_FEATURES adds cargo features (e.g. photocraft/ai-directml).
+  $Features = if ($env:PHOTOCRAFT_FEATURES) { "heif,$($env:PHOTOCRAFT_FEATURES)" } else { 'heif' }
+  Invoke-Native "cargo build ($Target)" { cargo build --release --locked -p photocraft -p photocraft-cli --features $Features --target $Target }
 }
 
 $Bin = Join-Path $TargetDir "$Target\release"

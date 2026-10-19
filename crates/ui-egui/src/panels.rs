@@ -20,7 +20,7 @@ const TOOL_SECTIONS: &[&[&[Tool]]] = &[
     &[
         &[Tool::RectMarquee, Tool::EllipseMarquee, Tool::SingleRowMarquee, Tool::SingleColumnMarquee],
         &[Tool::Lasso, Tool::PolygonLasso, Tool::MagneticLasso],
-        &[Tool::ObjectSelection, Tool::QuickSelection, Tool::MagicWand],
+        &[Tool::ObjectSelection, Tool::AiObjectSelection, Tool::QuickSelection, Tool::MagicWand],
         &[Tool::Crop, Tool::PerspectiveCrop, Tool::Slice, Tool::SliceSelect],
         &[Tool::Frame],
         &[Tool::Eyedropper, Tool::ColorSampler, Tool::Ruler, Tool::Note, Tool::Count],
@@ -28,6 +28,8 @@ const TOOL_SECTIONS: &[&[&[Tool]]] = &[
     &[
         &[Tool::Remove, Tool::SpotHealing, Tool::Healing, Tool::Patch, Tool::ContentAwareMove, Tool::RedEye],
         &[Tool::Brush, Tool::Pencil, Tool::MixerBrush, Tool::ColorReplacement],
+        // The Generative Brush: one button that opens a box of AI brushes beside it.
+        GENERATIVE_BRUSHES,
         &[Tool::CloneStamp, Tool::PatternStamp],
         &[Tool::HistoryBrush],
         &[Tool::Eraser, Tool::BackgroundEraser, Tool::MagicEraser],
@@ -43,6 +45,15 @@ const TOOL_SECTIONS: &[&[&[Tool]]] = &[
     ],
     &[&[Tool::Hand, Tool::RotateView], &[Tool::Zoom]],
 ];
+
+/// The Generative Brush button's brushes (Infill joins them with Generative Fill).
+pub(crate) const GENERATIVE_BRUSHES: &[Tool] = &[Tool::GenerativeRemoval, Tool::ReflectionRemoval];
+
+/// The Generative Brush slot: its button always shows the Generative Brush and a click opens its
+/// box of brushes, centred on the button, instead of picking a tool.
+fn is_generative_slot(slot: &[Tool]) -> bool {
+    slot.iter().any(|t| GENERATIVE_BRUSHES.contains(t))
+}
 
 /// The tool a slot shows: the current tool if it belongs to the slot, else the last one used.
 fn slot_tool(ui: &egui::Ui, current: Tool, slot: &[Tool], key: egui::Id) -> Tool {
@@ -155,17 +166,31 @@ pub fn toolbar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
                                     let key = egui::Id::new(("tool-slot", *slot_index));
                                     let tool = slot_tool(ui, app.ui.tool, slot, key);
                                     let sel = slot.contains(&app.ui.tool);
-                                    let tip = match crate::tool_shortcuts::shortcut(app, tool) {
-                                        Some(sc) => format!("{}  ({})", tl!(tool.label()), crate::shortcuts::pretty(&sc)),
-                                        None => tl!(tool.label()).to_string(),
+                                    let generative = is_generative_slot(slot);
+                                    let tip = if generative {
+                                        tl!("Generative Brush").to_string()
+                                    } else {
+                                        match crate::tool_shortcuts::shortcut(app, tool) {
+                                            Some(sc) => format!("{}  ({})", tl!(tool.label()), crate::shortcuts::pretty(&sc)),
+                                            None => tl!(tool.label()).to_string(),
+                                        }
                                     };
-                                    let resp =
-                                        icons::button_with_icon_size_tip(ui, icons::tool_icon(tool), bx, toolbar_icon_size(bx, t.pro), sel, &tip, tool_tips);
-                                    if slot.len() > 1 {
+                                    let icon = if generative { "generative-brush" } else { icons::tool_icon(tool) };
+                                    let resp = icons::button_with_icon_size_tip(ui, icon, bx, toolbar_icon_size(bx, t.pro), sel, &tip, tool_tips);
+                                    if slot.len() > 1 && !generative {
                                         paint_toolbar_flyout_indicator(ui, &t, &resp);
                                     }
+                                    let was_open = ui.data(|d| d.get_temp::<(egui::Id, Rect)>(flyout_id)).is_some_and(|(k, _)| k == key);
+                                    let mut just_opened = false;
                                     if resp.clicked() && ui.data(|d| d.get_temp::<egui::Id>(held_id)) != Some(key) {
-                                        crate::tool_memory::select(app, tool);
+                                        if generative {
+                                            if !was_open {
+                                                ui.data_mut(|d| d.insert_temp(flyout_id, (key, resp.rect)));
+                                                just_opened = true;
+                                            }
+                                        } else {
+                                            crate::tool_memory::select(app, tool);
+                                        }
                                     }
                                     // Double-clicking the Hand tool fits the image on screen (Photoshop).
                                     if resp.double_clicked() && tool == Tool::Hand {
@@ -191,6 +216,7 @@ pub fn toolbar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
                                     // it (#4932); the release that ends the long press that opened it doesn't.
                                     let open_here = ui.data(|d| d.get_temp::<(egui::Id, Rect)>(flyout_id)).is_some_and(|(k, _)| k == key);
                                     let reclicked = open_here
+                                        && !just_opened
                                         && (resp.secondary_clicked() || (resp.clicked() && ui.data(|d| d.get_temp::<egui::Id>(held_id)) != Some(key)));
                                     if reclicked {
                                         ui.data_mut(|d| d.remove::<(egui::Id, Rect)>(flyout_id));
@@ -202,7 +228,7 @@ pub fn toolbar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
                                             }
                                         });
                                     }
-                                    if slot.len() > 1 && long_press {
+                                    if slot.len() > 1 && long_press && !generative {
                                         // Holding a tool button selects the tool it shows, as a click would (#4453).
                                         crate::tool_memory::select(app, tool);
                                         ui.ctx().request_repaint();
@@ -210,11 +236,13 @@ pub fn toolbar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
                                     if let Some((open_key, anchor)) = ui.data(|d| d.get_temp::<(egui::Id, Rect)>(flyout_id))
                                         && open_key == key
                                     {
-                                        // Beside the tool, towards the canvas.
-                                        let (pivot, pos) = if crate::direction::is_rtl() {
-                                            (egui::Align2::RIGHT_TOP, anchor.left_top() - vec2(6.0, 0.0))
-                                        } else {
-                                            (egui::Align2::LEFT_TOP, anchor.right_top() + vec2(6.0, 0.0))
+                                        // Beside the tool, towards the canvas; the Generative Brush box is centred
+                                        // on its button.
+                                        let (pivot, pos) = match (crate::direction::is_rtl(), generative) {
+                                            (true, false) => (egui::Align2::RIGHT_TOP, anchor.left_top() - vec2(6.0, 0.0)),
+                                            (false, false) => (egui::Align2::LEFT_TOP, anchor.right_top() + vec2(6.0, 0.0)),
+                                            (true, true) => (egui::Align2::RIGHT_CENTER, anchor.left_center() - vec2(6.0, 0.0)),
+                                            (false, true) => (egui::Align2::LEFT_CENTER, anchor.right_center() + vec2(6.0, 0.0)),
                                         };
                                         let area = egui::Area::new(key.with("flyout")).order(egui::Order::Foreground).pivot(pivot).fixed_pos(pos).show(
                                             ui.ctx(),
@@ -975,6 +1003,7 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
                     widgets::vline(ui, 22.0);
                 }
                 if crate::eraser_ui::options_bar(app, ui, tool)
+                    || crate::ai_tools_ui::options_bar(app, ui, tool)
                     || crate::retouch_ui::options_bar(app, ui, tool)
                     || crate::vector_ui::options_bar(app, ui, tool)
                     || crate::analysis_ui::options_bar(app, ui, tool)

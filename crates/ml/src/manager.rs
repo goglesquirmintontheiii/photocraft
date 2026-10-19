@@ -35,7 +35,8 @@ pub struct Job {
     pub id: JobId,
     pub kind: JobKind,
     pub label: String,
-    pub model_kind: ModelKind,
+    /// What the model will be used for.
+    pub model_kinds: Vec<ModelKind>,
     pub state: JobState,
     pub done_bytes: u64,
     pub total_bytes: Option<u64>,
@@ -105,6 +106,7 @@ impl Manager {
     /// Opens the models folder `dir` (PhotoCraft's data folder + `Models`).
     pub fn open(dir: &Path) -> Result<Manager> {
         let store = Store::open(dir)?;
+        crate::accounts::load(dir);
         Ok(Manager { inner: Arc::new(Mutex::new(Inner { store, jobs: Vec::new(), next: 1 })) })
     }
 
@@ -149,14 +151,32 @@ impl Manager {
             .iter()
             .map(|model| CatalogRow {
                 model,
-                installed: inner.store.models().iter().find(|m| m.source == (ModelSource::Catalog { id: model.id.to_string() })).cloned(),
+                installed: inner.store.of_catalog(model.id).cloned(),
                 job: inner.jobs.iter().rev().find(|j| j.kind == (JobKind::Download { catalog_id: model.id.to_string() })).cloned(),
             })
             .collect()
     }
 
-    pub fn set_enabled(&self, id: &str, on: bool) -> Result<()> {
-        self.lock().store.set_enabled(id, on)
+    /// Switches one use of a model on or off.
+    pub fn set_enabled(&self, id: &str, kind: ModelKind, on: bool) -> Result<()> {
+        self.lock().store.set_enabled(id, kind, on)
+    }
+
+    pub fn rename(&self, id: &str, name: &str) -> Result<()> {
+        self.lock().store.rename(id, name)
+    }
+
+    pub fn set_kinds(&self, id: &str, kinds: &[ModelKind]) -> Result<()> {
+        self.lock().store.set_kinds(id, kinds)
+    }
+
+    /// The saved Hugging Face and Civitai tokens.
+    pub fn tokens(&self) -> crate::Tokens {
+        crate::accounts::load(self.lock().store.dir())
+    }
+
+    pub fn set_tokens(&self, tokens: &crate::Tokens) -> Result<()> {
+        crate::accounts::save(self.lock().store.dir(), tokens)
     }
 
     pub fn delete(&self, id: &str) -> Result<()> {
@@ -174,7 +194,7 @@ impl Manager {
         self.lock().jobs.retain(|j| j.id != job || j.active());
     }
 
-    fn new_job(&self, kind: JobKind, label: String, model_kind: ModelKind, total: Option<u64>, state: JobState) -> (JobId, Arc<AtomicBool>) {
+    fn new_job(&self, kind: JobKind, label: String, model_kinds: Vec<ModelKind>, total: Option<u64>, state: JobState) -> (JobId, Arc<AtomicBool>) {
         let mut inner = self.lock();
         let id = inner.next;
         inner.next = inner.next.saturating_add(1);
@@ -183,7 +203,7 @@ impl Manager {
             id,
             kind,
             label,
-            model_kind,
+            model_kinds,
             state,
             done_bytes: 0,
             total_bytes: total,
@@ -219,8 +239,7 @@ impl Manager {
         let model = RECOMMENDED.iter().find(|m| m.id == catalog_id).ok_or_else(|| Error::NotFound(format!("No recommended model {catalog_id:?}.")))?;
         {
             let inner = self.lock();
-            let source = ModelSource::Catalog { id: model.id.to_string() };
-            if inner.store.models().iter().any(|m| m.source == source) {
+            if inner.store.of_catalog(model.id).is_some() {
                 return Err(Error::Invalid(format!("{} is already downloaded.", model.name)));
             }
             if inner.jobs.iter().any(|j| j.active() && j.kind == (JobKind::Download { catalog_id: model.id.to_string() })) {
@@ -230,24 +249,26 @@ impl Manager {
         let files: Vec<RemoteFile> = model.files.iter().map(|f| f.remote()).collect();
         let total = model.files.iter().map(|f| f.size).fold(0u64, u64::saturating_add);
         let (id, cancel) =
-            self.new_job(JobKind::Download { catalog_id: model.id.to_string() }, model.name.to_string(), model.kind, Some(total), JobState::Running);
+            self.new_job(JobKind::Download { catalog_id: model.id.to_string() }, model.name.to_string(), model.kinds.to_vec(), Some(total), JobState::Running);
         let this = self.clone();
         let resolved = Resolved { name: model.name.to_string(), files, license: model.license.to_string() };
         let source = ModelSource::Catalog { id: model.id.to_string() };
-        let kind = model.kind;
+        let kinds = model.kinds.to_vec();
         spawn(move || {
-            let r = this.fetch_and_install(id, &cancel, resolved, kind, source);
+            let r = this.fetch_and_install(id, &cancel, resolved, &kinds, source);
             this.finish(id, r);
         });
         Ok(id)
     }
 
-    /// Starts importing from a link (Hugging Face, Civitai or any URL) as a model of `kind`.
-    pub fn import_link(&self, link: &str, kind: ModelKind, name: Option<String>) -> Result<JobId> {
+    /// Starts importing from a link (Hugging Face, Civitai or any URL) as a model used for
+    /// `kinds` (at least one).
+    pub fn import_link(&self, link: &str, kinds: &[ModelKind], name: Option<String>) -> Result<JobId> {
+        let kinds = uses(kinds)?;
         let parsed = Link::parse(link)?;
         let source = parsed.source(link);
         let label = name.clone().filter(|n| !n.trim().is_empty()).unwrap_or_else(|| link.trim().to_string());
-        let (id, cancel) = self.new_job(JobKind::Import, label, kind, None, JobState::Resolving);
+        let (id, cancel) = self.new_job(JobKind::Import, label, kinds.clone(), None, JobState::Resolving);
         let this = self.clone();
         spawn(move || {
             let r = (|| {
@@ -262,7 +283,7 @@ impl Manager {
                     j.total_bytes = total;
                     j.label = label;
                 });
-                this.fetch_and_install(id, &cancel, resolved, kind, source)
+                this.fetch_and_install(id, &cancel, resolved, &kinds, source)
             })();
             this.finish(id, r);
         });
@@ -270,8 +291,9 @@ impl Manager {
     }
 
     /// Starts importing model files from this computer (an ONNX model and its external data
-    /// file can be imported together) as one model of `kind`.
-    pub fn import_files(&self, paths: &[PathBuf], kind: ModelKind, name: Option<String>) -> Result<JobId> {
+    /// file can be imported together) as one model used for `kinds`.
+    pub fn import_files(&self, paths: &[PathBuf], kinds: &[ModelKind], name: Option<String>) -> Result<JobId> {
+        let kinds = uses(kinds)?;
         if paths.is_empty() {
             return Err(Error::Invalid("Choose a model file to import.".into()));
         }
@@ -288,11 +310,11 @@ impl Manager {
             .filter(|n| !n.trim().is_empty())
             .map(|n| n.trim().to_string())
             .unwrap_or_else(|| if first.is_empty() { "Imported model".into() } else { first });
-        let (id, cancel) = self.new_job(JobKind::Import, display.clone(), kind, Some(total), JobState::Running);
+        let (id, cancel) = self.new_job(JobKind::Import, display.clone(), kinds.clone(), Some(total), JobState::Running);
         let this = self.clone();
         let paths = paths.to_vec();
         spawn(move || {
-            let r = this.copy_and_install(id, &cancel, &paths, display, kind);
+            let r = this.copy_and_install(id, &cancel, &paths, display, &kinds);
             this.finish(id, r);
         });
         Ok(id)
@@ -319,7 +341,7 @@ impl Manager {
         inner.store.add(model)
     }
 
-    fn fetch_and_install(&self, id: JobId, cancel: &AtomicBool, resolved: Resolved, kind: ModelKind, source: ModelSource) -> Result<()> {
+    fn fetch_and_install(&self, id: JobId, cancel: &AtomicBool, resolved: Resolved, kinds: &[ModelKind], source: ModelSource) -> Result<()> {
         if resolved.files.is_empty() || resolved.files.iter().any(|f| !valid_file_name(&f.name)) {
             return Err(Error::Invalid("The model's files have unusable names.".into()));
         }
@@ -349,10 +371,14 @@ impl Manager {
                 InstalledModel {
                     id: model_id.clone(),
                     name: resolved.name.clone(),
-                    kind,
+                    kinds: kinds.to_vec(),
+                    disabled: Vec::new(),
+                    catalog_id: match &source {
+                        ModelSource::Catalog { id } => Some(id.clone()),
+                        _ => None,
+                    },
                     files: resolved.files.iter().map(|f| f.name.clone()).collect(),
                     size_bytes: 0,
-                    enabled: true,
                     source,
                     license: resolved.license.clone(),
                     installed_at: 0,
@@ -365,7 +391,7 @@ impl Manager {
         result
     }
 
-    fn copy_and_install(&self, id: JobId, cancel: &AtomicBool, paths: &[PathBuf], name: String, kind: ModelKind) -> Result<()> {
+    fn copy_and_install(&self, id: JobId, cancel: &AtomicBool, paths: &[PathBuf], name: String, kinds: &[ModelKind]) -> Result<()> {
         let (model_id, staging) = self.stage(&name)?;
         let result = (|| {
             let mut names = Vec::new();
@@ -396,10 +422,11 @@ impl Manager {
                 InstalledModel {
                     id: model_id.clone(),
                     name,
-                    kind,
+                    kinds: kinds.to_vec(),
+                    disabled: Vec::new(),
+                    catalog_id: None,
                     files: names,
                     size_bytes: 0,
-                    enabled: true,
                     source,
                     license: String::new(),
                     installed_at: 0,
@@ -411,6 +438,15 @@ impl Manager {
         }
         result
     }
+}
+
+/// The uses an import asked for, in section order; at least one.
+fn uses(kinds: &[ModelKind]) -> Result<Vec<ModelKind>> {
+    let kinds = crate::kind::normalize(kinds);
+    if kinds.is_empty() {
+        return Err(Error::Invalid("Choose what the model is used for.".into()));
+    }
+    Ok(kinds)
 }
 
 /// Runs a job on its own thread; a panic inside it can't take the app down.
@@ -454,7 +490,7 @@ mod tests {
         std::fs::write(src.join("model.onnx"), vec![1u8; 3000]).unwrap();
         std::fs::write(src.join("model.onnx.data"), vec![2u8; 5000]).unwrap();
         let m = Manager::open(&dir.join("Models")).unwrap();
-        let id = m.import_files(&[src.join("model.onnx"), src.join("model.onnx.data")], ModelKind::Removal, None).unwrap();
+        let id = m.import_files(&[src.join("model.onnx"), src.join("model.onnx.data")], &[ModelKind::Reflection, ModelKind::Removal], None).unwrap();
         let job = wait(&m, id);
         assert_eq!(job.state, JobState::Done, "{job:?}");
         assert_eq!(job.done_bytes, 8000);
@@ -464,8 +500,12 @@ mod tests {
         assert_eq!(installed[0].size_bytes, 8000);
         assert_eq!(m.available(ModelKind::Removal).len(), 1);
         assert!(m.available(ModelKind::Inpainting).is_empty());
-        m.set_enabled(&installed[0].id, false).unwrap();
+        assert_eq!(m.available(ModelKind::Reflection).len(), 1, "listed in both of its sections");
+        m.set_enabled(&installed[0].id, ModelKind::Removal, false).unwrap();
         assert!(m.available(ModelKind::Removal).is_empty());
+        assert_eq!(m.available(ModelKind::Reflection).len(), 1, "switching one use off leaves the other");
+        m.rename(&installed[0].id, "Renamed").unwrap();
+        assert_eq!(m.installed()[0].name, "Renamed");
         m.delete(&installed[0].id).unwrap();
         assert!(m.installed().is_empty());
         let _ = std::fs::remove_dir_all(dir);
@@ -475,10 +515,11 @@ mod tests {
     fn bad_imports_fail_without_leaving_files() {
         let dir = temp("bad");
         let m = Manager::open(&dir).unwrap();
-        assert!(m.import_files(&[], ModelKind::Other, None).is_err());
-        assert!(m.import_files(&[dir.join("missing.onnx")], ModelKind::Other, None).is_err());
-        assert!(m.import_files(std::slice::from_ref(&dir), ModelKind::Other, None).is_err());
-        assert!(m.import_link("not a link", ModelKind::Other, None).is_err());
+        assert!(m.import_files(&[], &[ModelKind::Other], None).is_err());
+        assert!(m.import_files(&[dir.join("missing.onnx")], &[ModelKind::Other], None).is_err());
+        assert!(m.import_files(std::slice::from_ref(&dir), &[ModelKind::Other], None).is_err());
+        assert!(m.import_link("not a link", &[ModelKind::Other], None).is_err());
+        assert!(m.import_link("Acly/MobileSAM", &[], None).is_err(), "an import needs a use");
         assert!(m.download("no-such-model").is_err());
         assert!(!dir.join(crate::store::STAGING).exists() || std::fs::read_dir(dir.join(crate::store::STAGING)).unwrap().next().is_none());
         let _ = std::fs::remove_dir_all(dir);
@@ -490,7 +531,7 @@ mod tests {
             id: 1,
             kind: JobKind::Import,
             label: String::new(),
-            model_kind: ModelKind::Other,
+            model_kinds: vec![ModelKind::Other],
             state: JobState::Running,
             done_bytes: 50,
             total_bytes: Some(100),

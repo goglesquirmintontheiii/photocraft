@@ -81,6 +81,9 @@ pub(crate) fn color_replacement_params(app: &PhotocraftApp) -> Value {
 
 /// Finish a stroke with a retouching tool. Returns false if `tool` isn't one.
 pub fn finish_stroke(app: &mut PhotocraftApp, tool: Tool, points: &[[f64; 3]], mods: egui::Modifiers) -> bool {
+    if crate::ai_tools_ui::finish_stroke(app, tool, points) {
+        return true;
+    }
     let o = app.ui.tool_options.clone();
     let pts = json!(points);
     let (cmd, mut p): (&str, Value) = match tool {

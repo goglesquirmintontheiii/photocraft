@@ -689,6 +689,16 @@ pub fn status_progress(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     let resp = ui.label(RichText::new(label).color(t.text_dim).size(12.0));
     if saving {
         resp.on_hover_text(tl!(&j.label));
+    } else {
+        // Time taken and left, and what it's doing ("on the GPU"), on hover.
+        let mut tip = elapsed(j.elapsed_ms);
+        if let Some(left) = eta_ms(j.progress, j.elapsed_ms) {
+            tip = format!("{tip} · {}", crate::i18n::fmt(tl!("about {time} left"), &[("time", &elapsed(left))]));
+        }
+        if !j.message.is_empty() && j.message != j.label {
+            tip = format!("{}\n{tip}", j.message);
+        }
+        resp.on_hover_text(tip);
     }
     if xresp.clicked() {
         cancel(app, j.id);
@@ -721,7 +731,11 @@ pub fn dialog(app: &mut PhotocraftApp, ctx: &egui::Context) {
         ui.horizontal(|ui| {
             ui.label(RichText::new(percent(&j)).color(t.text_faint).size(11.5));
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                ui.label(RichText::new(elapsed(j.elapsed_ms)).color(t.text_faint).size(11.5));
+                let mut time = elapsed(j.elapsed_ms);
+                if let Some(left) = eta_ms(j.progress, j.elapsed_ms) {
+                    time = format!("{time} · {}", crate::i18n::fmt(tl!("about {time} left"), &[("time", &elapsed(left))]));
+                }
+                ui.label(RichText::new(time).color(t.text_faint).size(11.5));
             });
         });
         ui.add_space(12.0);
@@ -735,6 +749,13 @@ pub fn dialog(app: &mut PhotocraftApp, ctx: &egui::Context) {
     if cancel_it {
         cancel(app, j.id);
     }
+}
+
+/// Time left, from the progress so far, once there's enough to go on (a few percent, over a
+/// second in); none for jobs that report no progress.
+pub(crate) fn eta_ms(progress: f32, elapsed_ms: f64) -> Option<f64> {
+    let f = f64::from(progress);
+    (f.is_finite() && (0.03..0.999).contains(&f) && elapsed_ms > 1500.0).then(|| elapsed_ms * (1.0 - f) / f)
 }
 
 fn elapsed(ms: f64) -> String {

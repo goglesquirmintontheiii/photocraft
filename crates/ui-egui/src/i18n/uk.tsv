@@ -3943,7 +3943,7 @@ curves	Smooth	Згладити
 	AI	ШІ
 	AI Models…	Моделі ШІ…
 	AI models run in the desktop app. Download PhotoCraft for your computer to use them.	Моделі ШІ працюють у застосунку для комп'ютера. Завантажте PhotoCraft для свого комп'ютера, щоб ними користуватися.
-	AI…	ШІ…
+	AI Models	Моделі ШІ
 	Add a model from a file or a link	Додати модель із файлу або за посиланням
 	Cancelled	Скасовано
 	Choose Files…	Вибрати файли…
@@ -3983,3 +3983,30 @@ curves	Smooth	Згладити
 	{done} of {total}	{done} з {total}
 	{n} installed	Встановлено: {n}
 	{n} to download	Можна завантажити: {n}
+
+# AI Object Selection, the Generative Brushes, AI Models accounts
+	AI Object Selection found nothing there — try a box around the object	Виділення об'єктів ШІ нічого там не знайшло — обведіть об'єкт рамкою
+	Accounts	Облікові записи
+	Also in {sections}	Також у: {sections}
+	Choose one or more uses, or paste a link to guess them.	Виберіть одне або кілька призначень або вставте посилання, щоб їх вгадати.
+	Download a model in Edit › Preferences › AI Models	Завантажте модель у розділі Редагування › Параметри › Моделі ШІ
+	Drag a box around the object, or click it	Обведіть об'єкт рамкою або клацніть його
+	Generative Brush	Генеративний пензель
+	Get Models…	Отримати моделі…
+	Get a token	Отримати токен
+	Guessed from the link. Click a use to change it.	Визначено за посиланням. Клацніть призначення, щоб змінити його.
+	Hide the token	Сховати токен
+	Model:	Модель:
+	No {kind} model yet. Download one in Edit › Preferences › AI Models.	Моделі для «{kind}» ще немає. Завантажте її в розділі Редагування › Параметри › Моделі ШІ.
+	Not signed in	Вхід не виконано
+	Paint over the reflection	Замалюйте відблиск
+	Paint over what to remove	Замалюйте те, що треба видалити
+	Rename this model	Перейменувати цю модель
+	Show the token	Показати токен
+	Some models need you to sign in before they download. Paste an access token from your account; it's kept on this computer and sent only to its own site.	Деякі моделі вимагають входу перед завантаженням. Вставте токен доступу зі свого облікового запису; він зберігається на цьому комп'ютері й надсилається лише на свій сайт.
+	This build can't run AI models	Ця збірка не може запускати моделі ШІ
+	{n} signed in	Вхід виконано: {n}
+	AI Object Selection Tool	Інструмент «Виділення об'єктів ШІ»
+	Generative Removal Brush Tool	Пензель «Генеративне видалення»
+	Reflection Removal Brush Tool	Пензель «Видалення відблисків»
+	API key	Ключ API

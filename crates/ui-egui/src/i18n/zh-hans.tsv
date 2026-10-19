@@ -2858,7 +2858,7 @@ curves	Smooth	平滑
 	AI	AI
 	AI Models…	AI 模型…
 	AI models run in the desktop app. Download PhotoCraft for your computer to use them.	AI 模型在桌面应用中运行。请下载适用于你电脑的 PhotoCraft 来使用它们。
-	AI…	AI…
+	AI Models	AI 模型
 	Add a model from a file or a link	从文件或链接添加模型
 	Cancelled	已取消
 	Choose Files…	选择文件…
@@ -2899,3 +2899,30 @@ curves	Smooth	平滑
 	{done} of {total}	{done} / {total}
 	{n} installed	已安装 {n} 个
 	{n} to download	{n} 个可下载
+
+# AI Object Selection, the Generative Brushes, AI Models accounts
+	AI Object Selection found nothing there — try a box around the object	AI 对象选择在那里没有找到任何内容 — 请框选对象
+	Accounts	账户
+	Also in {sections}	也在 {sections} 中
+	Choose one or more uses, or paste a link to guess them.	选择一个或多个用途，或粘贴链接让其自动猜测。
+	Download a model in Edit › Preferences › AI Models	在 编辑 › 首选项 › AI 模型 中下载模型
+	Drag a box around the object, or click it	在对象周围拖出一个框，或单击它
+	Generative Brush	生成式画笔
+	Get Models…	获取模型…
+	Get a token	获取令牌
+	Guessed from the link. Click a use to change it.	已根据链接猜测。单击某个用途可更改。
+	Hide the token	隐藏令牌
+	Model:	模型:
+	No {kind} model yet. Download one in Edit › Preferences › AI Models.	还没有 {kind} 模型。请在 编辑 › 首选项 › AI 模型 中下载。
+	Not signed in	未登录
+	Paint over the reflection	在反光处涂抹
+	Paint over what to remove	在要移除的内容上涂抹
+	Rename this model	重命名此模型
+	Show the token	显示令牌
+	Some models need you to sign in before they download. Paste an access token from your account; it's kept on this computer and sent only to its own site.	某些模型需要登录后才能下载。请粘贴你账户中的访问令牌；它保存在此电脑上，只会发送到对应的网站。
+	This build can't run AI models	此版本无法运行 AI 模型
+	{n} signed in	已登录 {n} 个
+	AI Object Selection Tool	AI 对象选择工具
+	Generative Removal Brush Tool	生成式移除画笔
+	Reflection Removal Brush Tool	反光移除画笔
+	API key	API 密钥

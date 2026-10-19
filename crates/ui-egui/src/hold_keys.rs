@@ -200,7 +200,7 @@ pub fn reposition_held(app: &PhotocraftApp, ctx: &egui::Context) -> bool {
 
 /// Tools whose in-progress drag the reposition key moves.
 pub fn repositions(t: Tool) -> bool {
-    matches!(t, Tool::RectMarquee | Tool::EllipseMarquee | Tool::Lasso | Tool::ObjectSelection) || crate::vector_ui::is_shape_tool(t)
+    matches!(t, Tool::RectMarquee | Tool::EllipseMarquee | Tool::Lasso | Tool::ObjectSelection | Tool::AiObjectSelection) || crate::vector_ui::is_shape_tool(t)
 }
 
 fn latch_id() -> egui::Id {

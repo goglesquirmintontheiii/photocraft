@@ -1073,17 +1073,26 @@ pub fn body(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Valu
     }
 }
 
-/// AI › Import › Choose Files…: asks for model files, then imports them in the background.
+/// AI Models › Import › Choose Files…: asks for model files, then imports them in the background.
 fn pick_model_files(app: &mut PhotocraftApp, pick: &Value) {
     let Some(manager) = app.services.models.clone() else { return };
-    let kind = pick.get("kind").and_then(Value::as_str).and_then(photocraft_ml::ModelKind::from_id).unwrap_or(photocraft_ml::ModelKind::Other);
+    let mut kinds: Vec<photocraft_ml::ModelKind> =
+        pick.get("kinds").and_then(Value::as_array).into_iter().flatten().filter_map(Value::as_str).filter_map(photocraft_ml::ModelKind::from_id).collect();
+    if kinds.is_empty() {
+        kinds.push(photocraft_ml::ModelKind::Other);
+    }
+    // "Use as" still on its automatic guess: guess again from the chosen files' names.
+    let auto = pick.get("auto").and_then(Value::as_bool).unwrap_or(false);
     let name = pick.get("name").and_then(Value::as_str).map(str::to_string);
     let initial_dir = crate::file_dialog::last_used_dir(&app.ui.recent_files);
     let extensions = Some(crate::ai_prefs_ui::MODEL_EXTENSIONS.iter().map(|e| (*e).to_string()).collect());
     let asked = app.ask_file(crate::FileDialogRequest::Open { multiple: true, initial_dir, extensions }, move |_app, answer| match answer {
         crate::FileDialogAnswer::Paths(paths) => {
             let paths: Vec<std::path::PathBuf> = paths.into_iter().map(std::path::PathBuf::from).collect();
-            manager.import_files(&paths, kind, name).map(|job| json!({"importJob": job})).map_err(|e| e.to_string())
+            let names: Vec<String> = paths.iter().filter_map(|p| p.file_name()).map(|n| n.to_string_lossy().into_owned()).collect();
+            let detected = photocraft_ml::detect_kinds(&names.join(" "));
+            let kinds = if auto && !detected.is_empty() { detected } else { kinds };
+            manager.import_files(&paths, &kinds, name).map(|job| json!({"importJob": job})).map_err(|e| e.to_string())
         }
         _ => Err("Model files can only be imported in the desktop app.".into()),
     });

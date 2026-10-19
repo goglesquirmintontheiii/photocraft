@@ -3843,7 +3843,7 @@ navigator	Zoom	Zvětšení
 	AI	AI
 	AI Models…	Modely AI…
 	AI models run in the desktop app. Download PhotoCraft for your computer to use them.	Modely AI běží v desktopové aplikaci. Chcete-li je používat, stáhněte si PhotoCraft pro svůj počítač.
-	AI…	AI…
+	AI Models	Modely AI
 	Add a model from a file or a link	Přidat model ze souboru nebo odkazu
 	Cancelled	Zrušeno
 	Choose Files…	Vybrat soubory…
@@ -3884,3 +3884,30 @@ navigator	Zoom	Zvětšení
 	{done} of {total}	{done} z {total}
 	{n} installed	Nainstalováno: {n}
 	{n} to download	Ke stažení: {n}
+
+# AI Object Selection, the Generative Brushes, AI Models accounts
+	AI Object Selection found nothing there — try a box around the object	Výběr objektu AI tam nic nenašel — obtáhněte objekt rámečkem
+	Accounts	Účty
+	Also in {sections}	Také v: {sections}
+	Choose one or more uses, or paste a link to guess them.	Zvolte jedno nebo více použití, nebo vložte odkaz a nechte je odhadnout.
+	Download a model in Edit › Preferences › AI Models	Stáhněte model v Úpravy › Předvolby › Modely AI
+	Drag a box around the object, or click it	Přetáhněte rámeček kolem objektu nebo na něj klikněte
+	Generative Brush	Generativní štětec
+	Get Models…	Získat modely…
+	Get a token	Získat token
+	Guessed from the link. Click a use to change it.	Odhadnuto z odkazu. Kliknutím na použití ho změníte.
+	Hide the token	Skrýt token
+	Model:	Model:
+	No {kind} model yet. Download one in Edit › Preferences › AI Models.	Zatím žádný model: {kind}. Stáhněte ho v Úpravy › Předvolby › Modely AI.
+	Not signed in	Nepřihlášeno
+	Paint over the reflection	Přemalujte odlesk
+	Paint over what to remove	Přemalujte, co chcete odstranit
+	Rename this model	Přejmenovat tento model
+	Show the token	Zobrazit token
+	Some models need you to sign in before they download. Paste an access token from your account; it's kept on this computer and sent only to its own site.	Některé modely vyžadují přihlášení před stažením. Vložte přístupový token ze svého účtu; zůstane v tomto počítači a odešle se jen na jeho vlastní web.
+	This build can't run AI models	Tato verze nemůže spouštět modely AI
+	{n} signed in	Přihlášeno: {n}
+	AI Object Selection Tool	Nástroj Výběr objektu AI
+	Generative Removal Brush Tool	Štětec Generativní odstranění
+	Reflection Removal Brush Tool	Štětec Odstranění odlesků
+	API key	Klíč API

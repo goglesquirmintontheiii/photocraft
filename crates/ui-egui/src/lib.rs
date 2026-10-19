@@ -20,6 +20,7 @@ pub mod adjust_editors;
 pub mod adjust_preview;
 pub mod adjust_ui;
 pub mod ai_prefs_ui;
+pub mod ai_tools_ui;
 mod alt_grab;
 pub mod analysis_ui;
 pub mod anchor_tools;
@@ -613,6 +614,8 @@ pub struct PhotocraftApp {
     pub(crate) remove_pending: Vec<Vec<[f64; 3]>>,
     pub(crate) remove_pending_target: Option<retouch_ui::RemoveTarget>,
     pub(crate) remove_trail: Option<stroke_trail::Trail>,
+    /// A Generative Brush stroke being filled (its tint stays until the job lands).
+    pub(crate) ai_pending: Option<ai_tools_ui::Pending>,
     /// The open menus' items, reused between frames (`menus::ItemCache`).
     pub(crate) menu_cache: Option<menus::ItemCache>,
     /// Move tool drag shown live (`move_ui`).
@@ -863,7 +866,11 @@ pub struct PhotocraftApp {
 }
 
 impl PhotocraftApp {
-    pub fn new(session: Session, services: Services) -> Self {
+    pub fn new(mut session: Session, services: Services) -> Self {
+        // The AI tools' commands find their models through the session.
+        if session.models().is_none() {
+            session.set_models(services.models.clone());
+        }
         let mut app = Self {
             session,
             ui: UiState::default(),
@@ -885,6 +892,7 @@ impl PhotocraftApp {
             remove_pending: Vec::new(),
             remove_pending_target: None,
             remove_trail: None,
+            ai_pending: None,
             menu_cache: None,
             move_preview: None,
             move_hover: None,

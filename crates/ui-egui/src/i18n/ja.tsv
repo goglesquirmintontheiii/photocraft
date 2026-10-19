@@ -3912,7 +3912,7 @@ curves	Smooth	スムーズ
 	AI	AI
 	AI Models…	AI モデル…
 	AI models run in the desktop app. Download PhotoCraft for your computer to use them.	AI モデルはデスクトップアプリで動作します。使用するには、お使いのコンピューター用の PhotoCraft をダウンロードしてください。
-	AI…	AI…
+	AI Models	AI モデル
 	Add a model from a file or a link	ファイルまたはリンクからモデルを追加
 	Cancelled	キャンセルしました
 	Choose Files…	ファイルを選択…
@@ -3952,3 +3952,30 @@ curves	Smooth	スムーズ
 	{done} of {total}	{done} / {total}
 	{n} installed	{n} 個インストール済み
 	{n} to download	{n} 個ダウンロード可能
+
+# AI Object Selection, the Generative Brushes, AI Models accounts
+	AI Object Selection found nothing there — try a box around the object	AI オブジェクト選択では何も見つかりませんでした — オブジェクトを囲むように範囲を指定してください
+	Accounts	アカウント
+	Also in {sections}	{sections} にもあります
+	Choose one or more uses, or paste a link to guess them.	用途を 1 つ以上選ぶか、リンクを貼り付けて推測させてください。
+	Download a model in Edit › Preferences › AI Models	編集 › 環境設定 › AI モデルでモデルをダウンロードしてください
+	Drag a box around the object, or click it	オブジェクトを囲むようにドラッグするか、クリックします
+	Generative Brush	生成ブラシ
+	Get Models…	モデルを入手…
+	Get a token	トークンを取得
+	Guessed from the link. Click a use to change it.	リンクから推測しました。用途をクリックして変更できます。
+	Hide the token	トークンを隠す
+	Model:	モデル:
+	No {kind} model yet. Download one in Edit › Preferences › AI Models.	{kind} のモデルがまだありません。編集 › 環境設定 › AI モデルでダウンロードしてください。
+	Not signed in	サインインしていません
+	Paint over the reflection	映り込みの上をペイントします
+	Paint over what to remove	削除する部分をペイントします
+	Rename this model	このモデルの名前を変更
+	Show the token	トークンを表示
+	Some models need you to sign in before they download. Paste an access token from your account; it's kept on this computer and sent only to its own site.	一部のモデルはダウンロード前にサインインが必要です。アカウントのアクセストークンを貼り付けてください。トークンはこのコンピューターに保存され、そのサイトにだけ送信されます。
+	This build can't run AI models	このビルドでは AI モデルを実行できません
+	{n} signed in	{n} 件サインイン済み
+	AI Object Selection Tool	AI オブジェクト選択ツール
+	Generative Removal Brush Tool	生成削除ブラシ
+	Reflection Removal Brush Tool	映り込み除去ブラシ
+	API key	API キー

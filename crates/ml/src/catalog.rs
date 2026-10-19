@@ -34,7 +34,8 @@ impl CatalogFile {
 pub struct CatalogModel {
     pub id: &'static str,
     pub name: &'static str,
-    pub kind: ModelKind,
+    /// What it's used for; it shows in each of these sections of the AI Models tab.
+    pub kinds: &'static [ModelKind],
     /// One line for the AI tab.
     pub description: &'static str,
     /// SPDX-style licence id, as the model's publisher states it.
@@ -48,13 +49,56 @@ impl CatalogModel {
     pub fn size(&self) -> u64 {
         self.files.iter().map(|f| f.size).fold(0u64, u64::saturating_add)
     }
+
+    /// The main use (the first section it's listed in).
+    pub fn kind(&self) -> ModelKind {
+        self.kinds.first().copied().unwrap_or(ModelKind::Other)
+    }
+
+    /// `org/name` of its Hugging Face repository, lowercase.
+    pub fn repo(&self) -> String {
+        self.homepage.trim_start_matches("https://huggingface.co/").trim_end_matches('/').to_ascii_lowercase()
+    }
+}
+
+/// The recommended model a link points at: one of its files, or its repository (by URL or
+/// `org/name`). `lower` is the link, lowercase.
+pub fn by_link(lower: &str) -> Option<&'static CatalogModel> {
+    let l = lower.trim().trim_end_matches('/');
+    let l = l.split(['?', '#']).next().unwrap_or(l);
+    // A file link names one model exactly ("blob" and "resolve" are the same file).
+    let file = l.replace("/blob/", "/resolve/");
+    if let Some(m) = RECOMMENDED.iter().find(|m| m.files.iter().any(|f| f.url.to_ascii_lowercase() == file)) {
+        return Some(m);
+    }
+    let repo = l.trim_start_matches("https://").trim_start_matches("http://");
+    let repo = repo.trim_start_matches("www.").trim_start_matches("huggingface.co/").trim_start_matches("hf.co/");
+    let repo: String = repo.split('/').take(2).collect::<Vec<_>>().join("/");
+    // Several recommended models can share a repository (the SD inpainting models); only a
+    // repository with one counts.
+    let mut found = RECOMMENDED.iter().filter(|m| m.repo() == repo);
+    match (found.next(), found.next()) {
+        (Some(m), None) => Some(m),
+        _ => None,
+    }
+}
+
+/// The recommended model an installed model is, from its files: every catalog file present
+/// with its exact size (`files` are names and sizes on disk). With `link` (where it was
+/// imported from) naming the model's repository, names alone are enough.
+pub fn identify(files: &[(String, u64)], link: Option<&str>) -> Option<&'static CatalogModel> {
+    let by_size = RECOMMENDED.iter().find(|m| m.files.iter().all(|f| files.iter().any(|(n, s)| n == f.name && *s == f.size)));
+    by_size.or_else(|| {
+        let m = by_link(&link?.to_ascii_lowercase())?;
+        m.files.iter().all(|f| files.iter().any(|(n, _)| n == f.name)).then_some(m)
+    })
 }
 
 pub static RECOMMENDED: &[CatalogModel] = &[
     CatalogModel {
         id: "sam-2-1-base-plus",
         name: "SAM 2.1 Base+",
-        kind: ModelKind::Segmentation,
+        kinds: &[ModelKind::Segmentation],
         description: "Meta's Segment Anything 2.1, the most accurate selections",
         license: "Apache-2.0",
         homepage: "https://huggingface.co/onnx-community/sam2.1-hiera-base-plus-ONNX",
@@ -88,7 +132,7 @@ pub static RECOMMENDED: &[CatalogModel] = &[
     CatalogModel {
         id: "sam-2-1-small",
         name: "SAM 2.1 Small",
-        kind: ModelKind::Segmentation,
+        kinds: &[ModelKind::Segmentation],
         description: "Segment Anything 2.1, balanced speed and accuracy",
         license: "Apache-2.0",
         homepage: "https://huggingface.co/onnx-community/sam2.1-hiera-small-ONNX",
@@ -122,7 +166,7 @@ pub static RECOMMENDED: &[CatalogModel] = &[
     CatalogModel {
         id: "sam-2-1-tiny",
         name: "SAM 2.1 Tiny",
-        kind: ModelKind::Segmentation,
+        kinds: &[ModelKind::Segmentation],
         description: "Segment Anything 2.1, fastest of the three",
         license: "Apache-2.0",
         homepage: "https://huggingface.co/onnx-community/sam2.1-hiera-tiny-ONNX",
@@ -156,7 +200,7 @@ pub static RECOMMENDED: &[CatalogModel] = &[
     CatalogModel {
         id: "mobilesam",
         name: "MobileSAM",
-        kind: ModelKind::Segmentation,
+        kinds: &[ModelKind::Segmentation],
         description: "Small, fast Segment Anything for older computers",
         license: "MIT",
         homepage: "https://huggingface.co/Acly/MobileSAM",
@@ -178,7 +222,7 @@ pub static RECOMMENDED: &[CatalogModel] = &[
     CatalogModel {
         id: "birefnet",
         name: "BiRefNet",
-        kind: ModelKind::Matting,
+        kinds: &[ModelKind::Matting, ModelKind::Segmentation],
         description: "High-resolution subject and background separation",
         license: "MIT",
         homepage: "https://huggingface.co/onnx-community/BiRefNet-ONNX",
@@ -192,7 +236,7 @@ pub static RECOMMENDED: &[CatalogModel] = &[
     CatalogModel {
         id: "birefnet-lite",
         name: "BiRefNet Lite",
-        kind: ModelKind::Matting,
+        kinds: &[ModelKind::Matting, ModelKind::Segmentation],
         description: "Faster subject and background separation",
         license: "MIT",
         homepage: "https://huggingface.co/onnx-community/BiRefNet_lite-ONNX",
@@ -206,7 +250,7 @@ pub static RECOMMENDED: &[CatalogModel] = &[
     CatalogModel {
         id: "rmbg-1-4",
         name: "BRIA RMBG 1.4",
-        kind: ModelKind::Matting,
+        kinds: &[ModelKind::Matting, ModelKind::Segmentation],
         description: "Background removal; non-commercial use only",
         license: "BRIA RMBG 1.4 (non-commercial)",
         homepage: "https://huggingface.co/briaai/RMBG-1.4",
@@ -220,7 +264,7 @@ pub static RECOMMENDED: &[CatalogModel] = &[
     CatalogModel {
         id: "lama",
         name: "LaMa",
-        kind: ModelKind::Removal,
+        kinds: &[ModelKind::Removal, ModelKind::Reflection],
         description: "Large-mask inpainting: removes objects and people cleanly",
         license: "Apache-2.0",
         homepage: "https://huggingface.co/Carve/LaMa-ONNX",
@@ -234,7 +278,7 @@ pub static RECOMMENDED: &[CatalogModel] = &[
     CatalogModel {
         id: "mi-gan",
         name: "MI-GAN",
-        kind: ModelKind::Removal,
+        kinds: &[ModelKind::Removal, ModelKind::Reflection],
         description: "Very fast, light object removal",
         license: "MIT",
         homepage: "https://huggingface.co/andraniksargsyan/migan",
@@ -248,7 +292,7 @@ pub static RECOMMENDED: &[CatalogModel] = &[
     CatalogModel {
         id: "sdxl-inpainting",
         name: "SDXL Inpainting 0.1",
-        kind: ModelKind::Inpainting,
+        kinds: &[ModelKind::Inpainting],
         description: "Stable Diffusion XL inpainting, best prompted fills",
         license: "OpenRAIL++-M",
         homepage: "https://huggingface.co/aimi-models/inpainting",
@@ -262,7 +306,7 @@ pub static RECOMMENDED: &[CatalogModel] = &[
     CatalogModel {
         id: "sd-2-inpainting",
         name: "Stable Diffusion 2 Inpainting",
-        kind: ModelKind::Inpainting,
+        kinds: &[ModelKind::Inpainting],
         description: "Stable Diffusion 2 inpainting at 512 px",
         license: "OpenRAIL++-M",
         homepage: "https://huggingface.co/sd2-community/stable-diffusion-2-inpainting",
@@ -276,7 +320,7 @@ pub static RECOMMENDED: &[CatalogModel] = &[
     CatalogModel {
         id: "sd-1-5-inpainting",
         name: "Stable Diffusion 1.5 Inpainting",
-        kind: ModelKind::Inpainting,
+        kinds: &[ModelKind::Inpainting],
         description: "The classic, lightest prompted inpainting model",
         license: "CreativeML OpenRAIL-M",
         homepage: "https://huggingface.co/aimi-models/inpainting",
@@ -295,11 +339,34 @@ mod tests {
     use crate::store::{valid_file_name, valid_id};
 
     #[test]
+    fn models_are_recognised_by_link_and_by_files() {
+        assert_eq!(by_link("https://huggingface.co/acly/mobilesam").map(|m| m.id), Some("mobilesam"));
+        assert_eq!(by_link("acly/mobilesam").map(|m| m.id), Some("mobilesam"));
+        assert_eq!(by_link("https://huggingface.co/carve/lama-onnx/blob/main/lama_fp32.onnx").map(|m| m.id), Some("lama"));
+        // Shared repository: not enough to tell.
+        assert!(by_link("https://huggingface.co/aimi-models/inpainting").is_none());
+        assert_eq!(
+            by_link("https://huggingface.co/aimi-models/inpainting/resolve/main/sd-v1-5-inpainting.safetensors").map(|m| m.id),
+            Some("sd-1-5-inpainting")
+        );
+        assert!(by_link("https://example.com/x.onnx").is_none());
+        let mobile = vec![("mobile_sam_image_encoder.onnx".to_string(), 28_157_093), ("sam_mask_decoder_single.onnx".to_string(), 16_501_323)];
+        assert_eq!(identify(&mobile, None).map(|m| m.id), Some("mobilesam"));
+        let resized = vec![("mobile_sam_image_encoder.onnx".to_string(), 1), ("sam_mask_decoder_single.onnx".to_string(), 2)];
+        assert!(identify(&resized, None).is_none());
+        assert_eq!(identify(&resized, Some("https://huggingface.co/Acly/MobileSAM")).map(|m| m.id), Some("mobilesam"));
+        let lama = vec![("lama_fp32.onnx".to_string(), 208_044_816), ("readme.md".to_string(), 10)];
+        assert_eq!(identify(&lama, None).map(|m| m.id), Some("lama"));
+        assert!(identify(&[], None).is_none());
+    }
+
+    #[test]
     fn every_entry_is_well_formed() {
         let mut ids = std::collections::HashSet::new();
         for m in RECOMMENDED {
             assert!(valid_id(m.id) && ids.insert(m.id), "{}", m.id);
             assert!(!m.files.is_empty(), "{}", m.id);
+            assert!(!m.kinds.is_empty() && crate::kind::normalize(m.kinds).len() == m.kinds.len(), "{}", m.id);
             assert!(m.homepage.starts_with("https://"), "{}", m.id);
             let mut names = std::collections::HashSet::new();
             for f in m.files {

@@ -1,18 +1,21 @@
-//! Edit › Preferences › AI: the local AI models PhotoCraft's generative tools use.
+//! Edit › Preferences › AI Models: the local AI models PhotoCraft's generative tools use.
 //!
-//! A search bar and Import over one collapsible section per model kind (collapsed by default,
-//! opened by a search that matches inside). Each section lists the installed models (a tick box
-//! to enable or disable, size on disk, delete) and the recommended models not downloaded yet
-//! (a darker, striped row with Download). A downloaded recommended model keeps its stripes on the
-//! normal background. Downloads and imports run in the background with progress, time taken and
-//! an ETA, and continue when the dialog closes.
+//! A search bar and Import over one collapsible section per use (collapsed by default, opened by
+//! a search that matches inside). A model that does several things is listed in each of its
+//! sections: its tick box there switches that use on or off, while rename, delete and download act
+//! on the model everywhere. Installed models show their size on disk; disabled ones are darker.
+//! Recommended models not downloaded yet have a darker, striped row with Download; once
+//! downloaded (or imported from elsewhere and recognised) they keep the stripes on the normal
+//! background. Downloads and imports run in the background with progress, time taken and an ETA,
+//! and continue when the dialog closes. Accounts, at the bottom, holds the Hugging Face and
+//! Civitai tokens for models that need a sign-in.
 //!
 //! Model changes apply at once, like Photoshop's plug-in and preset managers: OK and Cancel are
 //! for the dialog's other settings.
 
 use egui::{Align, Color32, CornerRadius, Layout, Rect, RichText, Sense, Stroke, Ui, UiBuilder, pos2, vec2};
 use photocraft_ml::manager::CatalogRow;
-use photocraft_ml::{InstalledModel, Job, JobKind, JobState, Manager, ModelKind, ModelSource, format_duration, format_size};
+use photocraft_ml::{InstalledModel, Job, JobKind, JobState, Manager, ModelKind, format_duration, format_size};
 use serde_json::{Map, Value, json};
 
 use crate::i18n::fmt;
@@ -41,14 +44,33 @@ fn get_str(m: &Map<String, Value>, k: &str) -> String {
     m.get(k).and_then(Value::as_str).unwrap_or("").to_string()
 }
 
-fn kind_of(m: &Map<String, Value>) -> ModelKind {
-    m.get("importKind").and_then(Value::as_str).and_then(ModelKind::from_id).unwrap_or(ModelKind::Removal)
+/// The Import panel's "Use as": the uses picked, and whether they're still the automatic guess.
+fn import_kinds(m: &Map<String, Value>) -> Vec<ModelKind> {
+    m.get("importKinds").and_then(Value::as_array).into_iter().flatten().filter_map(Value::as_str).filter_map(ModelKind::from_id).collect()
 }
 
-/// A slightly darker shade of `c`, for recommended rows (darker in both themes).
-fn darker(c: Color32) -> Color32 {
-    let k = 0.86;
+fn set_import_kinds(m: &mut Map<String, Value>, kinds: &[ModelKind]) {
+    m.insert("importKinds".into(), json!(kinds.iter().map(|k| k.id()).collect::<Vec<_>>()));
+}
+
+/// While "Use as" hasn't been touched, it follows what the link or file name gives away.
+fn auto_kinds(m: &Map<String, Value>) -> bool {
+    m.get("importKindsManual").and_then(Value::as_bool) != Some(true)
+}
+
+/// A darker shade of `c` by factor `k` (darker in both themes).
+fn shade(c: Color32, k: f32) -> Color32 {
     Color32::from_rgba_unmultiplied((c.r() as f32 * k) as u8, (c.g() as f32 * k) as u8, (c.b() as f32 * k) as u8, c.a())
+}
+
+/// Recommended rows not downloaded yet.
+fn darker(c: Color32) -> Color32 {
+    shade(c, 0.86)
+}
+
+/// Installed models switched off in a section: a little darker than enabled ones.
+fn disabled_bg(c: Color32) -> Color32 {
+    shade(c, 0.9)
 }
 
 /// Diagonal stripes across `rect`: what marks a recommended model's row.
@@ -108,12 +130,13 @@ enum RowLook {
 }
 
 /// Paints a row's background and gives a child `Ui` inside it.
-fn row<R>(ui: &mut Ui, look: RowLook, add: impl FnOnce(&mut Ui) -> R) -> R {
+fn row<R>(ui: &mut Ui, look: RowLook, disabled: bool, add: impl FnOnce(&mut Ui) -> R) -> R {
     let t = Tokens::get(ui.ctx());
     let w = ui.available_width();
     let (rect, _) = ui.allocate_exact_size(vec2(w, ROW_H), Sense::hover());
     let bg = match look {
         RowLook::Recommended => darker(t.field),
+        _ if disabled => disabled_bg(t.field),
         _ => t.field,
     };
     ui.painter().rect_filled(rect, t.radius_sm, bg);
@@ -125,14 +148,15 @@ fn row<R>(ui: &mut Ui, look: RowLook, add: impl FnOnce(&mut Ui) -> R) -> R {
     add(&mut child)
 }
 
-/// Name, then a dim details line, elided to `width`.
-fn texts(ui: &mut Ui, name: &str, tag: Option<&str>, details: &str, width: f32) {
+/// Name, then a dim details line, elided to `width`. `dim` for a disabled model.
+fn texts(ui: &mut Ui, name: &str, tag: Option<&str>, details: &str, width: f32, dim: bool) {
     let t = Tokens::get(ui.ctx());
     ui.vertical(|ui| {
         ui.spacing_mut().item_spacing.y = 1.0;
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 6.0;
-            ui.add(egui::Label::new(RichText::new(name).font(crate::theme::medium(12.5)).color(t.text)).truncate().selectable(false)).on_hover_text(name);
+            let color = if dim { t.text_dim } else { t.text };
+            ui.add(egui::Label::new(RichText::new(name).font(crate::theme::medium(12.5)).color(color)).truncate().selectable(false)).on_hover_text(name);
             if let Some(tag) = tag {
                 ui.label(RichText::new(tag).size(10.5).color(t.accent_text));
             }
@@ -159,34 +183,73 @@ fn delete_controls(ui: &mut Ui, id: &str, st: &mut Map<String, Value>, m: &Manag
     }
 }
 
-fn installed_row(ui: &mut Ui, model: &InstalledModel, recommended: bool, st: &mut Map<String, Value>, m: &Manager, error: &mut Option<String>) {
+/// Rename: the name becomes a text field; Enter or leaving it saves, Esc cancels.
+fn rename_field(ui: &mut Ui, model: &InstalledModel, st: &mut Map<String, Value>, m: &Manager, error: &mut Option<String>, width: f32) {
+    let mut text = st.get("renameText").and_then(Value::as_str).unwrap_or(&model.name).to_string();
+    let id = ui.id().with(("ai-rename", &model.id));
+    let resp = crate::widgets::text_field(ui, id, &mut text, tl!("Name"), width.clamp(80.0, 320.0), false);
+    if st.get("renameText").is_none() {
+        resp.request_focus();
+    }
+    st.insert("renameText".into(), json!(text));
+    let escape = ui.input(|i| i.key_pressed(egui::Key::Escape));
+    if escape {
+        st.remove("renaming");
+        st.remove("renameText");
+    } else if resp.lost_focus() {
+        if let Err(e) = m.rename(&model.id, &text) {
+            *error = Some(e.to_string());
+        }
+        st.remove("renaming");
+        st.remove("renameText");
+    }
+}
+
+fn installed_row(ui: &mut Ui, model: &InstalledModel, kind: ModelKind, st: &mut Map<String, Value>, m: &Manager, error: &mut Option<String>) {
     let t = Tokens::get(ui.ctx());
+    let recommended = model.is_recommended();
+    let enabled = model.enabled_for(kind);
     let look = if recommended { RowLook::RecommendedInstalled } else { RowLook::Plain };
-    row(ui, look, |ui| {
+    // The section matters only for the tick box; renaming shows in one section at a time.
+    let renaming = st.get("renaming").and_then(Value::as_str) == Some(&format!("{}/{}", model.id, kind.id()));
+    row(ui, look, !enabled, |ui| {
         delete_controls(ui, &model.id, st, m, error);
+        if !renaming && crate::icons::button(ui, "pencil", 24.0, false, tl!("Rename this model")).clicked() {
+            st.insert("renaming".into(), json!(format!("{}/{}", model.id, kind.id())));
+            st.remove("renameText");
+        }
         ui.label(RichText::new(format_size(model.size_bytes)).size(11.5).color(t.text_dim).monospace());
         ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
             let (rect, resp) = ui.allocate_exact_size(vec2(14.0, 14.0), Sense::click());
-            let resp = resp.on_hover_text(if model.enabled { tl!("Enabled: tools can use this model") } else { tl!("Disabled: no tool offers this model") });
-            crate::widgets::check_box(ui.painter(), rect, model.enabled, resp.hovered(), resp.is_pointer_button_down_on(), &t);
+            let resp = resp.on_hover_text(if enabled { tl!("Enabled: tools can use this model") } else { tl!("Disabled: no tool offers this model") });
+            crate::widgets::check_box(ui.painter(), rect, enabled, resp.hovered(), resp.is_pointer_button_down_on(), &t);
             if resp.clicked()
-                && let Err(e) = m.set_enabled(&model.id, !model.enabled)
+                && let Err(e) = m.set_enabled(&model.id, kind, !enabled)
             {
                 *error = Some(e.to_string());
+            }
+            let w = ui.available_width();
+            if renaming {
+                rename_field(ui, model, st, m, error, w - 8.0);
+                return;
             }
             let mut details = model.source.describe();
             if !model.license.is_empty() {
                 details = format!("{details} · {}", model.license);
             }
-            let w = ui.available_width();
-            texts(ui, &model.name, recommended.then_some(tl!("Recommended")), &details, w);
+            // Where else it's listed, so a tick here isn't mistaken for switching it off everywhere.
+            let others: Vec<&str> = model.kinds.iter().filter(|k| **k != kind).map(|k| tl!(k.title())).collect();
+            if !others.is_empty() {
+                details = format!("{details} · {}", fmt(tl!("Also in {sections}"), &[("sections", &others.join(", "))]));
+            }
+            texts(ui, &model.name, recommended.then_some(tl!("Recommended")), &details, w, !enabled);
         });
     });
 }
 
 fn recommended_row(ui: &mut Ui, r: &CatalogRow, m: &Manager, error: &mut Option<String>) {
     let t = Tokens::get(ui.ctx());
-    row(ui, RowLook::Recommended, |ui| {
+    row(ui, RowLook::Recommended, false, |ui| {
         let job = r.job.as_ref().filter(|j| j.active() || matches!(j.state, JobState::Failed(_)));
         match job {
             Some(j) if j.active() => {
@@ -222,7 +285,7 @@ fn recommended_row(ui: &mut Ui, r: &CatalogRow, m: &Manager, error: &mut Option<
                 }
                 None => {
                     let details = format!("{} · {}", r.model.description, r.model.license);
-                    texts(ui, r.model.name, Some(tl!("Recommended")), &details, w);
+                    texts(ui, r.model.name, Some(tl!("Recommended")), &details, w, false);
                 }
             }
         });
@@ -276,14 +339,36 @@ fn import_panel(ui: &mut Ui, st: &mut Map<String, Value>, m: &Manager, error: &m
             }
         });
         ui.add_space(6.0);
-        let mut kind = kind_of(st);
-        let options: Vec<(ModelKind, &str)> = ModelKind::ALL.iter().map(|k| (*k, k.title())).collect();
-        ui.horizontal(|ui| {
+        // "Use as": one or more uses, guessed from the link as it's typed (or from the files'
+        // names when they're chosen) until a use is clicked.
+        let mut kinds = import_kinds(st);
+        let auto = auto_kinds(st);
+        ui.horizontal_wrapped(|ui| {
             ui.label(RichText::new(tl!("Use as")).color(t.text_dim));
-            if crate::widgets::dropdown(ui, "ai-import-kind", &mut kind, &options, 200.0) {
-                st.insert("importKind".into(), json!(kind.id()));
+            for k in ModelKind::ALL {
+                let on = kinds.contains(&k);
+                if crate::widgets::pill_tab(ui, k.title(), on).on_hover_text(tl!(k.used_by())).clicked() {
+                    if on {
+                        kinds.retain(|x| *x != k);
+                    } else {
+                        kinds.push(k);
+                    }
+                    kinds = photocraft_ml::kind::normalize(&kinds);
+                    set_import_kinds(st, &kinds);
+                    st.insert("importKindsManual".into(), json!(true));
+                }
             }
         });
+        let hint = if kinds.is_empty() {
+            tl!("Choose one or more uses, or paste a link to guess them.")
+        } else if auto {
+            tl!("Guessed from the link. Click a use to change it.")
+        } else {
+            ""
+        };
+        if !hint.is_empty() {
+            ui.label(RichText::new(hint).size(11.0).color(t.text_faint));
+        }
         let mut name = get_str(st, "importName");
         ui.horizontal(|ui| {
             ui.label(RichText::new(tl!("Name")).color(t.text_dim));
@@ -300,12 +385,17 @@ fn import_panel(ui: &mut Ui, st: &mut Map<String, Value>, m: &Manager, error: &m
                 if crate::widgets::text_field(ui, ui.id().with("ai-import-link"), &mut link, tl!("Hugging Face, Civitai or download link"), w, false).changed()
                 {
                     st.insert("importLink".into(), json!(link));
+                    if auto {
+                        set_import_kinds(st, &photocraft_ml::detect_kinds(&link));
+                    }
                 }
                 if crate::widgets::primary_button(ui, tl!("Import"), 70.0).clicked() {
-                    match m.import_link(&link, kind, name.clone()) {
+                    match m.import_link(&link, &import_kinds(st), name.clone()) {
                         Ok(_) => {
                             st.insert("importLink".into(), json!(""));
                             st.insert("importName".into(), json!(""));
+                            st.remove("importKinds");
+                            st.remove("importKindsManual");
                         }
                         Err(e) => *error = Some(e.to_string()),
                     }
@@ -319,7 +409,7 @@ fn import_panel(ui: &mut Ui, st: &mut Map<String, Value>, m: &Manager, error: &m
         } else {
             ui.horizontal(|ui| {
                 if crate::widgets::primary_button(ui, tl!("Choose Files…"), 110.0).clicked() {
-                    st.insert(PICK_FILES.into(), json!({"kind": kind.id(), "name": name}));
+                    st.insert(PICK_FILES.into(), json!({"kinds": kinds.iter().map(|k| k.id()).collect::<Vec<_>>(), "auto": auto, "name": name}));
                 }
                 ui.label(
                     RichText::new(tl!("ONNX, safetensors, checkpoint or GGUF. Pick an ONNX model and its .data file together.")).size(11.0).color(t.text_faint),
@@ -334,7 +424,7 @@ fn import_jobs(ui: &mut Ui, jobs: &[Job], m: &Manager) {
     let t = Tokens::get(ui.ctx());
     for j in jobs.iter().filter(|j| j.kind == JobKind::Import) {
         let failed = matches!(j.state, JobState::Failed(_));
-        row(ui, RowLook::Plain, |ui| {
+        row(ui, RowLook::Plain, false, |ui| {
             if j.active() {
                 if crate::widgets::compact_button(ui, tl!("Cancel"), 22.0).clicked() {
                     m.cancel(j.id);
@@ -360,6 +450,99 @@ fn import_jobs(ui: &mut Ui, jobs: &[Job], m: &Manager) {
         });
         ui.add_space(4.0);
     }
+}
+
+/// Accounts: Hugging Face and Civitai tokens, for models that need a sign-in. A collapsible
+/// section like the others, below them.
+fn accounts(ui: &mut Ui, st: &mut Map<String, Value>, m: &Manager, error: &mut Option<String>, query: &str) {
+    let t = Tokens::get(ui.ctx());
+    let saved = m.tokens();
+    let count = [&saved.hugging_face, &saved.civitai].iter().filter(|s| !s.is_empty()).count();
+    let open = {
+        let key = "open.accounts";
+        let open = st.get(key).and_then(Value::as_bool).unwrap_or(false);
+        let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 26.0), Sense::click());
+        if resp.hovered() {
+            ui.painter().rect_filled(rect, t.radius_sm, t.hover);
+        }
+        let c = rect.left_center() + vec2(9.0, 0.0);
+        let pts = if open {
+            vec![c + vec2(-4.0, -2.0), c + vec2(4.0, -2.0), c + vec2(0.0, 3.0)]
+        } else {
+            vec![c + vec2(-2.0, -4.0), c + vec2(3.0, 0.0), c + vec2(-2.0, 4.0)]
+        };
+        ui.painter().add(egui::Shape::convex_polygon(pts, t.icon, Stroke::NONE));
+        ui.painter().text(rect.left_center() + vec2(20.0, 0.0), egui::Align2::LEFT_CENTER, tl!("Accounts"), crate::theme::semibold(12.5), t.text);
+        let summary = if count == 0 { tl!("Not signed in").to_string() } else { fmt(tl!("{n} signed in"), &[("n", &count.to_string())]) };
+        ui.painter().text(rect.right_center() - vec2(8.0, 0.0), egui::Align2::RIGHT_CENTER, summary, crate::theme::medium(11.0), t.text_faint);
+        if resp.on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
+            st.insert(key.into(), json!(!open));
+        }
+        open || (!query.is_empty() && matches(query, "accounts token hugging face civitai sign in", ""))
+    };
+    if !open {
+        return;
+    }
+    ui.indent("ai-accounts", |ui| {
+        ui.label(RichText::new(tl!("Some models need you to sign in before they download. Paste an access token from your account; it's kept on this computer and sent only to its own site.")).size(11.0).color(t.text_faint));
+        ui.add_space(4.0);
+        let rows: [(&str, &str, &str, &str); 2] = [
+            ("hf", "Hugging Face", "https://huggingface.co/settings/tokens", "hf_…"),
+            ("civitai", "Civitai", "https://civitai.com/user/account", "API key"),
+        ];
+        for (key, site, page, hint) in rows {
+            let stored = if key == "hf" { &saved.hugging_face } else { &saved.civitai };
+            let field = format!("token.{key}");
+            let mut text = st.get(&field).and_then(Value::as_str).map(str::to_string).unwrap_or_else(|| stored.clone());
+            ui.horizontal(|ui| {
+                ui.add_sized(vec2(96.0, 22.0), egui::Label::new(RichText::new(site).color(t.text_dim)).selectable(false));
+                let w = (ui.available_width() - 150.0).clamp(120.0, 360.0);
+                let show = st.get(&format!("show.{key}")).and_then(Value::as_bool).unwrap_or(false);
+                let resp = if show {
+                    crate::widgets::text_field(ui, ui.id().with(("ai-token", key)), &mut text, tl!(hint), w, true)
+                } else {
+                    password_field(ui, ui.id().with(("ai-token-hidden", key)), &mut text, tl!(hint), w)
+                };
+                if resp.changed() {
+                    st.insert(field.clone(), json!(text));
+                }
+                let eye = if show { "eye-off" } else { "eye" };
+                if crate::icons::button(ui, eye, 24.0, false, if show { tl!("Hide the token") } else { tl!("Show the token") }).clicked() {
+                    st.insert(format!("show.{key}"), json!(!show));
+                }
+                let edited = photocraft_ml::accounts::clean(&text) != *stored;
+                if edited && crate::widgets::compact_button(ui, tl!("Save"), 22.0).clicked() {
+                    let mut tokens = saved.clone();
+                    if key == "hf" {
+                        tokens.hugging_face = text.clone();
+                    } else {
+                        tokens.civitai = text.clone();
+                    }
+                    match m.set_tokens(&tokens) {
+                        Ok(()) => {
+                            st.remove(&field);
+                        }
+                        Err(e) => *error = Some(e.to_string()),
+                    }
+                }
+                if !edited {
+                    ui.hyperlink_to(RichText::new(tl!("Get a token")).size(11.0), page);
+                }
+            });
+        }
+    });
+}
+
+/// A single-line field that shows dots instead of what's typed.
+fn password_field(ui: &mut Ui, id: egui::Id, text: &mut String, hint: &str, width: f32) -> egui::Response {
+    let t = Tokens::get(ui.ctx());
+    egui::Frame::new()
+        .fill(t.field)
+        .stroke(Stroke::new(1.0, t.field_border))
+        .corner_radius(t.radius_sm)
+        .inner_margin(egui::Margin::symmetric(6, 2))
+        .show(ui, |ui| ui.add(egui::TextEdit::singleline(text).id(id).password(true).hint_text(hint).frame(egui::Frame::NONE).desired_width(width - 12.0)))
+        .inner
 }
 
 fn matches(query: &str, name: &str, extra: &str) -> bool {
@@ -414,15 +597,14 @@ pub(crate) fn body(ui: &mut Ui, f: &mut Map<String, Value>, models: Option<&Mana
     let catalog = m.catalog();
     let mut shown_any = false;
     for kind in ModelKind::ALL {
-        let rec_installed: Vec<&InstalledModel> = installed
+        let rec_installed: Vec<&InstalledModel> =
+            installed.iter().filter(|i| i.uses(kind) && i.is_recommended()).filter(|i| matches(&query, &i.name, i.license.as_str())).collect();
+        let others: Vec<&InstalledModel> = installed.iter().filter(|i| i.uses(kind) && !i.is_recommended()).filter(|i| matches(&query, &i.name, "")).collect();
+        let to_download: Vec<&CatalogRow> = catalog
             .iter()
-            .filter(|i| i.kind == kind && matches!(&i.source, ModelSource::Catalog { .. }))
-            .filter(|i| matches(&query, &i.name, i.license.as_str()))
+            .filter(|r| r.model.kinds.contains(&kind) && r.installed.is_none())
+            .filter(|r| matches(&query, r.model.name, r.model.description))
             .collect();
-        let others: Vec<&InstalledModel> =
-            installed.iter().filter(|i| i.kind == kind && !matches!(&i.source, ModelSource::Catalog { .. })).filter(|i| matches(&query, &i.name, "")).collect();
-        let to_download: Vec<&CatalogRow> =
-            catalog.iter().filter(|r| r.model.kind == kind && r.installed.is_none()).filter(|r| matches(&query, r.model.name, r.model.description)).collect();
         let total_here = rec_installed.len() + others.len() + to_download.len();
         // Every kind a tool uses keeps its section, even empty, so it's clear where an import
         // goes; "Other" appears only when something was imported there. A search hides
@@ -437,11 +619,11 @@ pub(crate) fn body(ui: &mut Ui, f: &mut Map<String, Value>, models: Option<&Mana
                 ui.label(RichText::new(tl!(kind.used_by())).size(11.0).color(t.text_faint));
                 ui.add_space(2.0);
                 for model in others {
-                    installed_row(ui, model, false, st, m, &mut error);
+                    installed_row(ui, model, kind, st, m, &mut error);
                     ui.add_space(4.0);
                 }
                 for model in rec_installed {
-                    installed_row(ui, model, true, st, m, &mut error);
+                    installed_row(ui, model, kind, st, m, &mut error);
                     ui.add_space(4.0);
                 }
                 for r in to_download {
@@ -461,6 +643,8 @@ pub(crate) fn body(ui: &mut Ui, f: &mut Map<String, Value>, models: Option<&Mana
                 .color(t.text_faint),
         );
     }
+    ui.add_space(6.0);
+    accounts(ui, st, m, &mut error, &query);
     ui.add_space(8.0);
     ui.label(RichText::new(fmt(tl!("Models are stored in {path}"), &[("path", &m.dir().display().to_string())])).size(11.0).color(t.text_faint));
     match error {
