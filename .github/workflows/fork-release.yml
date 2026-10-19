@@ -1,0 +1,97 @@
+name: Fork release (Linux AppImage)
+
+# Builds PhotoCraft for Linux x86_64 as an AppImage (runs on Fedora and any distro with glibc
+# 2.35 or newer) and publishes it as a GitHub release of this fork.
+#
+# Trigger: push a tag named fork-v<version>, e.g. `git tag fork-v0.10.0.1 && git push origin fork-v0.10.0.1`,
+# or run it from the Actions tab with a tag name.
+#
+# This workflow belongs to the goglesquirmintontheiii/photocraft fork only: it needs no signing
+# secrets and is kept out of pull requests to storytold/photocraft.
+
+on:
+  push:
+    tags: ["fork-v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build and release (fork-v<version>)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fork-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  appimage:
+    name: Linux x86_64 AppImage
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    env:
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: 0
+      TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 1
+
+      - name: Version from the tag
+        run: |
+          case "$TAG" in fork-v*) ;; *) echo "::error::tag must look like fork-v0.10.0.1, got $TAG"; exit 1 ;; esac
+          echo "PHOTOCRAFT_VERSION=${TAG#fork-v}" >> "$GITHUB_ENV"
+          echo "PHOTOCRAFT_BUILD_DATE=$(date -u +%Y-%m-%d)" >> "$GITHUB_ENV"
+          echo "PHOTOCRAFT_BUILD_SHA=$GITHUB_SHA" >> "$GITHUB_ENV"
+
+      # The fonts the official builds embed. The build still works without them (system and
+      # bundled fallbacks), so a failed checkout doesn't stop the release.
+      - name: Check out craft-fonts
+        id: fonts
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          repository: storytold/craft-fonts
+          ref: abb83316d96aa59c1cf64784289e378fe9fa5695
+          path: craft-fonts
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev \
+            libasound2-dev pkg-config desktop-file-utils appstream python3-yaml zsync
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: fork-release-linux-x86_64
+
+      - name: Build and package the AppImage
+        run: |
+          if [ "${{ steps.fonts.outcome }}" = "success" ]; then
+            export CRAFT_FONTS_DIR="$GITHUB_WORKSPACE/craft-fonts"
+          fi
+          packaging/linux/package.sh --formats appimage
+
+      - name: Smoke-test the AppImage
+        run: |
+          chmod +x dist/release/*.AppImage
+          APPIMAGE_EXTRACT_AND_RUN=1 dist/release/*.AppImage --version
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes="release-notes/$TAG.md"
+          if [ -f "$notes" ]; then args=(--notes-file "$notes"); else args=(--generate-notes); fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/release/*.AppImage* --clobber
+          else
+            gh release create "$TAG" dist/release/*.AppImage* --title "PhotoCraft ${TAG#fork-v} (fork)" --prerelease "${args[@]}"
+          fi
