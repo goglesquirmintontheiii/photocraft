@@ -1,7 +1,7 @@
 name: Fork release (Linux AppImage, Windows)
 
-# Builds PhotoCraft for Linux x86_64 as an AppImage (runs on Fedora and any distro with glibc
-# 2.35 or newer) and for Windows x86_64 (a portable zip: photocraft.exe and what it needs), both
+# Builds PhotoCraft for Linux x86_64 as an AppImage (runs on Fedora 40 or newer and any distro
+# with glibc 2.39 or newer: ONNX Runtime's prebuilt library needs glibc 2.38) and for Windows x86_64 (a portable zip: photocraft.exe and what it needs), both
 # with the local AI model runtime, and publishes them as a GitHub release of this fork.
 #
 # Trigger: a push to the fork-builds branch that changes release-notes/VERSION. The release is
@@ -49,7 +49,7 @@ jobs:
   appimage:
     name: Linux x86_64 AppImage
     needs: version
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 150
     env:
       PHOTOCRAFT_VERSION: ${{ needs.version.outputs.version }}
@@ -89,7 +89,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          key: fork-release-linux-x86_64-ai
+          key: fork-release-linux-x86_64-ai-noble
 
       - name: Build and package the AppImage
         run: |

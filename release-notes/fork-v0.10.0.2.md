@@ -2,7 +2,7 @@ PhotoCraft 0.10.0.2 (fork): the first AI tools, which run on your own computer.
 
 ## Downloads
 
-- **Linux (Fedora and other distros):** `photocraft-0.10.0.2-linux-x86_64.AppImage`. Make it executable (`chmod +x`), then run it.
+- **Linux (Fedora and other distros):** `photocraft-0.10.0.2-linux-x86_64.AppImage`. Make it executable (`chmod +x`), then run it. It needs Fedora 40 or newer, or another distro with glibc 2.39 or newer, because the AI model runtime requires it.
 - **Windows (x86_64):** `photocraft-0.10.0.2-windows-x86_64.zip`. Unzip it anywhere and run `photocraft.exe`. Keep the DLLs next to it: they run the AI models on your graphics card. The build is unsigned, so Windows SmartScreen may ask you to confirm the first time.
 
 ## New tools
