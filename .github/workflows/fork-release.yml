@@ -1,7 +1,8 @@
-name: Fork release (Linux AppImage)
+name: Fork release (Linux AppImage, Windows)
 
 # Builds PhotoCraft for Linux x86_64 as an AppImage (runs on Fedora and any distro with glibc
-# 2.35 or newer) and publishes it as a GitHub release of this fork.
+# 2.35 or newer) and for Windows x86_64 (a portable zip: photocraft.exe and what it needs), both
+# with the local AI model runtime, and publishes them as a GitHub release of this fork.
 #
 # Trigger: a push to the fork-builds branch that changes release-notes/VERSION. The release is
 # tagged fork-v<that version> and uses release-notes/fork-v<version>.md as its notes. It can
@@ -23,25 +24,46 @@ concurrency:
   group: fork-release-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+
 jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      tag: ${{ steps.v.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - id: v
+        run: |
+          version="$(tr -d '[:space:]' < release-notes/VERSION)"
+          case "$version" in [0-9]*.[0-9]*) ;; *) echo "::error::release-notes/VERSION must hold a version like 0.10.0.2, got '$version'"; exit 1 ;; esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=fork-v$version" >> "$GITHUB_OUTPUT"
+
   appimage:
     name: Linux x86_64 AppImage
+    needs: version
     runs-on: ubuntu-22.04
-    timeout-minutes: 120
+    timeout-minutes: 150
     env:
-      CARGO_TERM_COLOR: always
-      CARGO_INCREMENTAL: 0
+      PHOTOCRAFT_VERSION: ${{ needs.version.outputs.version }}
+      # The AI model runtime, with the GPU through Vulkan (WebGPU); its libwebgpu_dawn.so goes in
+      # the AppImage's usr/lib, found through this rpath.
+      PHOTOCRAFT_FEATURES: photocraft/ai-webgpu
+      RUSTFLAGS: -C link-arg=-Wl,-rpath,$ORIGIN/../lib
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      - name: Version from release-notes/VERSION
+      - name: Build date and commit
         run: |
-          version="$(tr -d '[:space:]' < release-notes/VERSION)"
-          case "$version" in [0-9]*.[0-9]*) ;; *) echo "::error::release-notes/VERSION must hold a version like 0.10.0.1, got '$version'"; exit 1 ;; esac
-          echo "TAG=fork-v$version" >> "$GITHUB_ENV"
-          echo "PHOTOCRAFT_VERSION=$version" >> "$GITHUB_ENV"
           echo "PHOTOCRAFT_BUILD_DATE=$(date -u +%Y-%m-%d)" >> "$GITHUB_ENV"
           echo "PHOTOCRAFT_BUILD_SHA=$GITHUB_SHA" >> "$GITHUB_ENV"
 
@@ -67,7 +89,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          key: fork-release-linux-x86_64
+          key: fork-release-linux-x86_64-ai
 
       - name: Build and package the AppImage
         run: |
@@ -80,15 +102,125 @@ jobs:
         run: |
           chmod +x dist/release/*.AppImage
           APPIMAGE_EXTRACT_AND_RUN=1 dist/release/*.AppImage --version
+          # Every library the app links resolves inside the AppImage or on the system.
+          cd "$(mktemp -d)"
+          "$GITHUB_WORKSPACE"/dist/release/*.AppImage --appimage-extract >/dev/null
+          ldd squashfs-root/usr/bin/photocraft | tee /dev/stderr | (! grep 'not found')
 
-      - name: Publish the release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: dist/release/*.AppImage*
+          if-no-files-found: error
+
+  windows:
+    name: Windows x86_64
+    needs: version
+    runs-on: windows-2022
+    timeout-minutes: 150
+    env:
+      PHOTOCRAFT_VERSION: ${{ needs.version.outputs.version }}
+      PHOTOCRAFT_REQUIRE_WINRES: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Check out craft-fonts
+        id: fonts
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          repository: storytold/craft-fonts
+          ref: abb83316d96aa59c1cf64784289e378fe9fa5695
+          path: craft-fonts
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: fork-release-windows-x86_64-ai
+
+      # ONNX Runtime's prebuilt libraries use the dynamic C runtime, so this build does too and
+      # ships the Visual C++ runtime DLLs beside the executable (app-local), with DirectML.dll
+      # for the GPU.
+      - name: Build
+        shell: pwsh
+        run: |
+          $env:PHOTOCRAFT_BUILD_DATE = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd')
+          $env:PHOTOCRAFT_BUILD_SHA = $env:GITHUB_SHA
+          if ('${{ steps.fonts.outcome }}' -eq 'success') { $env:CRAFT_FONTS_DIR = Join-Path $env:GITHUB_WORKSPACE 'craft-fonts' }
+          cargo build --release --locked -p photocraft -p photocraft-cli --features "heif,photocraft/ai-directml" --target x86_64-pc-windows-msvc
+          if ($LASTEXITCODE -ne 0) { throw "cargo build failed" }
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $v = $env:PHOTOCRAFT_VERSION
+          $bin = 'target\x86_64-pc-windows-msvc\release'
+          $name = "photocraft-$v-windows-x86_64"
+          $stage = Join-Path 'dist' $name
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item "$bin\photocraft.exe", "$bin\photocraft-cli.exe" $stage
+          # DirectML.dll, wherever ort's build copied it.
+          $dml = Get-ChildItem target -Recurse -Filter DirectML.dll -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $dml) { throw 'DirectML.dll not found in the build' }
+          Copy-Item $dml.FullName $stage
+          # The Visual C++ runtime, from the runner's Visual Studio redistributables.
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          $crt = Get-ChildItem (Join-Path $vs 'VC\Redist\MSVC') -Recurse -Directory -Filter 'Microsoft.VC14*.CRT' |
+            Where-Object { $_.FullName -match '\\x64\\' -and $_.FullName -notmatch 'onecore|debug' } | Select-Object -First 1
+          if (-not $crt) { throw 'Visual C++ runtime DLLs not found' }
+          Copy-Item (Join-Path $crt.FullName '*.dll') $stage
+          foreach ($f in 'README.md', 'LICENSE-MIT', 'LICENSE-APACHE', 'NOTICE') { if (Test-Path $f) { Copy-Item $f $stage } }
+          if ($env:CRAFT_FONTS_DIR -or (Test-Path craft-fonts\fonts)) {
+            Get-ChildItem craft-fonts\fonts -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+              $lic = Join-Path $_.FullName 'OFL.txt'
+              if (Test-Path $lic) { Copy-Item $lic (Join-Path $stage "OFL-$($_.Name).txt") }
+            }
+          }
+          Get-ChildItem $stage | Format-Table Name, Length
+          Compress-Archive -Path $stage -DestinationPath "dist\$name.zip"
+
+      - name: Smoke-test
+        shell: pwsh
+        run: |
+          $stage = Get-ChildItem dist -Directory | Select-Object -First 1
+          & (Join-Path $stage.FullName 'photocraft-cli.exe') --version
+          if ($LASTEXITCODE -ne 0) { throw 'photocraft-cli --version failed' }
+          # The app is a GUI executable: start it and check it gets as far as answering --version
+          # (a missing DLL stops it before main).
+          $p = Start-Process -FilePath (Join-Path $stage.FullName 'photocraft.exe') -ArgumentList '--version' -PassThru -Wait -NoNewWindow
+          if ($p.ExitCode -ne 0) { throw "photocraft.exe --version exited with $($p.ExitCode)" }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/*.zip
+          if-no-files-found: error
+
+  publish:
+    name: Publish the release
+    needs: [version, appimage, windows]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+          merge-multiple: true
+      - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.version.outputs.tag }}
         run: |
+          ls -la assets
           notes="release-notes/$TAG.md"
           if [ -f "$notes" ]; then args=(--notes-file "$notes"); else args=(--generate-notes); fi
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" dist/release/*.AppImage* --clobber
+            gh release upload "$TAG" assets/* --clobber
           else
-            gh release create "$TAG" dist/release/*.AppImage* --target "$GITHUB_SHA" --title "PhotoCraft ${TAG#fork-v} (fork)" --prerelease "${args[@]}"
+            gh release create "$TAG" assets/* --target "$GITHUB_SHA" --title "PhotoCraft ${TAG#fork-v} (fork)" --prerelease "${args[@]}"
           fi
