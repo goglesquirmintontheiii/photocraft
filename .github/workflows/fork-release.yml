@@ -220,8 +220,16 @@ jobs:
           ls -la assets
           notes="release-notes/$TAG.md"
           if [ -f "$notes" ]; then args=(--notes-file "$notes"); else args=(--generate-notes); fi
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" assets/* --clobber
-          else
-            gh release create "$TAG" assets/* --target "$GITHUB_SHA" --title "PhotoCraft ${TAG#fork-v} (fork)" --prerelease "${args[@]}"
+          publish() {
+            if gh release view "$TAG" >/dev/null 2>&1; then
+              gh release upload "$TAG" assets/* --clobber
+            else
+              gh release create "$TAG" assets/* --target "$GITHUB_SHA" --title "PhotoCraft ${TAG#fork-v} (fork)" --prerelease "${args[@]}"
+            fi
+          }
+          if ! publish > publish.log 2>&1; then
+            cat publish.log
+            echo "::error title=Publish::$(tail -c 3000 publish.log | sed -e 's/%/%25/g' | sed -e ':a;N;$!ba;s/\n/%0A/g')"
+            exit 1
           fi
+          cat publish.log
