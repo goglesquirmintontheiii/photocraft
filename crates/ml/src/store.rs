@@ -331,6 +331,23 @@ impl Store {
         self.save()
     }
 
+    /// The model's files are now these (a checkpoint made into a pipeline).
+    pub fn set_files(&mut self, id: &str, files: Vec<String>) -> Result<()> {
+        if files.is_empty() || files.iter().any(|f| !valid_model_path(f)) {
+            return Err(Error::Invalid("internal error: unusable model file names".into()));
+        }
+        self.get_mut(id)?.files = files;
+        self.save()
+    }
+
+    /// Measures a model's size on disk again.
+    pub fn refresh_size(&mut self, id: &str) {
+        let size = dir_size(&self.model_dir(id));
+        if let Ok(m) = self.get_mut(id) {
+            m.size_bytes = size;
+        }
+    }
+
     /// Renames a model (it keeps its folder and id).
     pub fn rename(&mut self, id: &str, name: &str) -> Result<()> {
         let name = clean_name(name).ok_or_else(|| Error::Invalid("Type a name for the model.".into()))?;

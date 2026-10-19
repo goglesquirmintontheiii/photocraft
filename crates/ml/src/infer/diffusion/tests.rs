@@ -227,7 +227,7 @@ fn an_inpainting_pipeline_runs_guided_in_one_batch_and_repeats_with_a_seed() {
     let r = rig("inpaint", 9, -1);
     let img = Image::new(100, 60, vec![0.5; 100 * 60 * 3]).unwrap();
     let hole = hole_in_middle(100, 60);
-    let opts = Prompting { prompt: "a cat".into(), negative: String::new(), seed: Some(1234), steps: 5, guidance: 7.5 };
+    let opts = Prompting { prompt: "a cat".into(), negative: String::new(), seed: Some(1234), steps: 5, guidance: 7.5, strength: 1.0 };
     let mut msgs = Vec::new();
     let a = diffuse_with(&r.loader, &r.model, &img, &hole, &opts, &mut |f, m| {
         msgs.push((f, m.to_string()));
@@ -268,6 +268,21 @@ fn a_batch_of_one_runs_twice_a_step_and_no_guidance_once() {
     assert!(seen.iter().all(|s| s.iter().any(|(n, sh)| n == "sample" && sh[0] == 1)));
     diffuse_with(&r.loader, &r.model, &img, &hole, &Prompting { guidance: 1.0, ..opts }, &mut go).unwrap();
     assert_eq!(r.unet_runs.load(Ordering::Relaxed), 9);
+}
+
+#[test]
+fn a_light_pass_runs_only_the_last_steps_from_the_picture() {
+    let r = rig("strength", 9, -1);
+    let img = Image::new(64, 64, vec![0.4; 64 * 64 * 3]).unwrap();
+    let hole = hole_in_middle(64, 64);
+    let opts = Prompting { steps: 20, strength: 0.3, seed: Some(8), ..Prompting::default() };
+    let a = diffuse_with(&r.loader, &r.model, &img, &hole, &opts, &mut go).unwrap();
+    assert_eq!(r.unet_runs.load(Ordering::Relaxed), 6, "30 % of 20 steps");
+    let full = diffuse_with(&r.loader, &r.model, &img, &hole, &Prompting { strength: 1.0, ..opts.clone() }, &mut go).unwrap();
+    assert_ne!(a.rgb, full.rgb);
+    // Even the faintest pass runs one step.
+    diffuse_with(&r.loader, &r.model, &img, &hole, &Prompting { strength: 0.0, ..opts }, &mut go).unwrap();
+    assert_eq!(r.unet_runs.load(Ordering::Relaxed), 27);
 }
 
 #[test]
@@ -334,9 +349,10 @@ fn pipeline_parts_are_found_in_folders_or_flat() {
     assert!(is_pipeline_part(&p.unet) && !is_pipeline_part(Path::new("/models/lama/lama_fp32.onnx")));
     // 1000 × 250 keeps its shape within the limits.
     let any = port("sample", Elem::F32, &[-1, 9, -1, -1]);
-    assert_eq!(work_size(1000, 250, &any), (768, 256));
-    assert_eq!(work_size(512, 512, &any), (512, 512));
-    assert_eq!(work_size(10, 10, &port("sample", Elem::F32, &[1, 9, 64, 64])), (512, 512));
+    assert_eq!(work_size(1000, 250, &any, 512), (768, 256));
+    assert_eq!(work_size(512, 512, &any, 512), (512, 512));
+    assert_eq!(work_size(512, 512, &any, 1024), (1024, 1024));
+    assert_eq!(work_size(10, 10, &port("sample", Elem::F32, &[1, 9, 64, 64]), 512), (512, 512));
     let _ = Data::F32(Vec::new());
 }
 

@@ -114,6 +114,16 @@ pub(crate) fn job_status(j: &Job) -> String {
             }
             s
         }
+        JobState::Preparing => {
+            let pct = (j.fraction().unwrap_or(0.0) * 100.0).round().to_string();
+            let mut s = fmt(tl!("Preparing it to run… {percent}%"), &[("percent", &pct)]);
+            s.push_str(&format!(" · {}", format_duration(j.elapsed())));
+            if let Some(eta) = j.eta() {
+                s.push_str(" · ");
+                s.push_str(&fmt(tl!("about {time} left"), &[("time", &format_duration(eta))]));
+            }
+            s
+        }
         JobState::Done => fmt(tl!("Finished in {time}"), &[("time", &format_duration(j.elapsed()))]),
         JobState::Failed(e) => e.clone(),
         JobState::Cancelled => tl!("Cancelled").to_string(),
@@ -591,6 +601,24 @@ pub(crate) fn body(ui: &mut Ui, f: &mut Map<String, Value>, models: Option<&Mana
     });
     let find = find.trim().to_lowercase();
     let query = if find.is_empty() { query } else { find };
+    // Where models run.
+    ui.horizontal(|ui| {
+        ui.label(RichText::new(tl!("Run models on")).color(t.text_dim));
+        let mut current = m.device().id().to_string();
+        // NPUs are reached through DirectML, on Windows.
+        let options: Vec<(String, &str)> = photocraft_ml::infer::Device::ALL
+            .into_iter()
+            .filter(|d| cfg!(windows) || *d != photocraft_ml::infer::Device::Npu || current == "npu")
+            .map(|d| (d.id().to_string(), tl!(d.title())))
+            .collect();
+        if crate::widgets::dropdown(ui, "ai-device", &mut current, &options, 190.0)
+            && let Some(d) = photocraft_ml::infer::Device::from_id(&current)
+            && let Err(e) = m.set_device(d)
+        {
+            error = Some(e.to_string());
+        }
+        ui.label(RichText::new(tl!("Falls back to the next option when a model can't run there.")).size(11.0).color(t.text_faint));
+    });
     ui.add_space(6.0);
     if st.get("importOpen").and_then(Value::as_bool).unwrap_or(false) {
         import_panel(ui, st, m, &mut error);

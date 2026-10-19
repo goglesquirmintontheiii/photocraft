@@ -4,6 +4,9 @@
 //! with a local diffusion model; it is shown on the canvas as soon as it lands, and clicking a
 //! variation shows that one instead (each is a new layer, one undo step that the next replaces).
 //! OK keeps the one shown; with none made yet it fills at once. Cancel takes it back.
+//!
+//! Edit › Generative Sharpen… (below Generative Fill in the selection's menu) is the same dialog
+//! without prompts: how much detail, the seed and the model.
 
 use crate::PhotocraftApp;
 use crate::state::DialogKind;
@@ -13,6 +16,20 @@ use serde_json::{Map, Value, json};
 
 const MARK: &str = "__generativeFill";
 pub const COMMAND: &str = "edit.generativeFill";
+pub const SHARPEN: &str = "edit.generativeSharpen";
+
+/// Whether the dialog is Generative Sharpen's.
+fn sharpen(fields: &Map<String, Value>) -> bool {
+    fields.get("mode").and_then(Value::as_str) == Some("sharpen")
+}
+
+fn command(fields: &Map<String, Value>) -> &'static str {
+    if sharpen(fields) { SHARPEN } else { COMMAND }
+}
+
+fn label(fields: &Map<String, Value>) -> &'static str {
+    if sharpen(fields) { "Generative Sharpen" } else { "Generative Fill" }
+}
 
 pub fn owns(fields: &Map<String, Value>) -> bool {
     fields.contains_key(MARK)
@@ -23,53 +40,84 @@ fn text(fields: &Map<String, Value>, k: &str) -> String {
 }
 
 pub fn open(app: &mut PhotocraftApp) -> Result<Value, String> {
+    open_mode(app, false)
+}
+
+/// Edit › Generative Sharpen….
+pub fn open_sharpen(app: &mut PhotocraftApp) -> Result<Value, String> {
+    open_mode(app, true)
+}
+
+fn open_mode(app: &mut PhotocraftApp, sharpen: bool) -> Result<Value, String> {
     let st = app.session.active().ok_or("no document")?;
     if st.doc.selection.is_none() {
-        return Err("Make a selection first: Generative Fill fills the selection".into());
+        return Err(if sharpen { "Make a selection first: Generative Sharpen sharpens the selection" } else { "Make a selection first: Generative Fill fills the selection" }.into());
     }
     // A dialog left over from before (it can't be: Cancel and OK clear it) is forgotten.
     let _ = app.run("edit.generativeFill.cancel", json!({}));
     let o = &app.ui.tool_options;
     let mut fields = Map::new();
     fields.insert(MARK.into(), json!(true));
-    fields.insert("__label".into(), json!("Generative Fill…"));
-    // The Infill brush and this dialog share the last prompt.
-    fields.insert("prompt".into(), json!(o.infill_prompt));
-    fields.insert("negative".into(), json!(o.infill_negative));
-    fields.insert("seed".into(), json!(o.infill_seed));
-    fields.insert("model".into(), json!(o.infill_model));
+    if sharpen {
+        // The Generative Enhance brush and this dialog share their settings.
+        fields.insert("mode".into(), json!("sharpen"));
+        fields.insert("__label".into(), json!("Generative Sharpen…"));
+        fields.insert("seed".into(), json!(o.enhance_seed));
+        fields.insert("model".into(), json!(o.enhance_model));
+        fields.insert("detail".into(), json!(o.enhance_detail));
+    } else {
+        // The Infill brush and this dialog share the last prompt.
+        fields.insert("__label".into(), json!("Generative Fill…"));
+        fields.insert("prompt".into(), json!(o.infill_prompt));
+        fields.insert("negative".into(), json!(o.infill_negative));
+        fields.insert("seed".into(), json!(o.infill_seed));
+        fields.insert("model".into(), json!(o.infill_model));
+    }
     let id = app.ui.open_dialog(DialogKind::Command, fields);
     Ok(json!({"dialog": id}))
 }
 
 /// The models it can use, best first.
-fn models(app: &PhotocraftApp) -> Vec<(String, String)> {
-    app.services.models.as_ref().map(|m| m.available(ModelKind::Inpainting).into_iter().map(|i| (i.id, i.name)).collect()).unwrap_or_default()
+fn models(app: &PhotocraftApp, fields: &Map<String, Value>) -> Vec<(String, String)> {
+    let kind = if sharpen(fields) { ModelKind::Enhance } else { ModelKind::Inpainting };
+    app.services.models.as_ref().map(|m| m.available(kind).into_iter().map(|i| (i.id, i.name)).collect()).unwrap_or_default()
+}
+
+fn detail(fields: &Map<String, Value>) -> f32 {
+    fields.get("detail").and_then(Value::as_f64).map_or(0.5, |d| d.clamp(0.0, 1.0) as f32)
 }
 
 /// The command's parameters from the dialog's fields.
 fn params(app: &PhotocraftApp, fields: &Map<String, Value>, preview: bool) -> Value {
     let model = text(fields, "model");
-    let model = if models(app).iter().any(|(id, _)| *id == model) { json!(model) } else { Value::Null };
+    let model = if models(app, fields).iter().any(|(id, _)| *id == model) { json!(model) } else { Value::Null };
+    let seed = crate::ai_tools_ui::parse_seed(&text(fields, "seed")).map_or(Value::Null, |s| json!(s));
+    if sharpen(fields) {
+        return json!({"seed": seed, "detail": detail(fields), "model": model, "preview": preview});
+    }
     json!({
         "prompt": text(fields, "prompt"),
         "negativePrompt": text(fields, "negative"),
-        "seed": crate::ai_tools_ui::parse_seed(&text(fields, "seed")).map_or(Value::Null, |s| json!(s)),
+        "seed": seed,
         "model": model,
         "preview": preview,
     })
 }
 
-/// The Generative Fill job running on the active document, if any: its progress and message.
+/// The Generative Fill or Sharpen job running on the active document, if any: its progress and
+/// message.
 fn running(app: &PhotocraftApp) -> Option<(f32, String)> {
-    app.session.active_job().filter(|j| j.command == COMMAND || j.label == "Generative Fill").map(|j| (j.progress, j.message))
+    app.session
+        .active_job()
+        .filter(|j| [COMMAND, SHARPEN].contains(&j.command.as_str()) || ["Generative Fill", "Generative Sharpen"].contains(&j.label.as_str()))
+        .map(|j| (j.progress, j.message))
 }
 
 /// Makes another variation.
 fn generate(app: &mut PhotocraftApp, fields: &mut Map<String, Value>) {
     remember(app, fields);
     let p = params(app, fields, true);
-    match app.run(COMMAND, p) {
+    match app.run(command(fields), p) {
         Ok(_) => {
             fields.remove("error");
         }
@@ -82,6 +130,12 @@ fn generate(app: &mut PhotocraftApp, fields: &mut Map<String, Value>) {
 /// Keeps the prompt for next time (and for the Infill brush).
 fn remember(app: &mut PhotocraftApp, fields: &Map<String, Value>) {
     let o = &mut app.ui.tool_options;
+    if sharpen(fields) {
+        o.enhance_seed = text(fields, "seed");
+        o.enhance_model = text(fields, "model");
+        o.enhance_detail = detail(fields);
+        return;
+    }
     o.infill_prompt = text(fields, "prompt");
     o.infill_negative = text(fields, "negative");
     o.infill_seed = text(fields, "seed");
@@ -92,11 +146,13 @@ pub fn body(app: &mut PhotocraftApp, ui: &mut egui::Ui, fields: &mut Map<String,
     let t = Tokens::get(ui.ctx());
     let width = 400.0;
     ui.set_min_width(width);
-    let available = models(app);
+    let available = models(app, fields);
     if available.is_empty() {
         ui.label(
             egui::RichText::new(if app.services.models.is_none() {
                 tl!("AI models run in the desktop app.")
+            } else if sharpen(fields) {
+                tl!("Generative Sharpen needs a model. Download one in Edit › Preferences › AI Models (Generative Enhance).")
             } else {
                 tl!("Generative Fill needs a model. Download one in Edit › Preferences › AI Models (Generative Fill & Infill).")
             })
@@ -108,12 +164,26 @@ pub fn body(app: &mut PhotocraftApp, ui: &mut egui::Ui, fields: &mut Map<String,
         }
         return;
     }
-    // Prompt, negative prompt, seed.
-    let (mut prompt, mut negative, mut seed) = (text(fields, "prompt"), text(fields, "negative"), text(fields, "seed"));
-    let enter = crate::ai_tools_ui::prompt_fields(ui, "generative-fill", &mut prompt, &mut negative, &mut seed, width);
-    fields.insert("prompt".into(), json!(prompt));
-    fields.insert("negative".into(), json!(negative));
-    fields.insert("seed".into(), json!(seed));
+    let enter = if sharpen(fields) {
+        // Detail and seed.
+        let (mut d, mut seed) = (detail(fields), text(fields, "seed"));
+        ui.horizontal(|ui| {
+            crate::ai_tools_ui::detail_menu(ui, "generative-sharpen-detail", &mut d);
+            ui.add_space(8.0);
+            crate::ai_tools_ui::seed_field(ui, "generative-sharpen-seed", &mut seed);
+        });
+        fields.insert("detail".into(), json!(d));
+        fields.insert("seed".into(), json!(seed));
+        false
+    } else {
+        // Prompt, negative prompt, seed.
+        let (mut prompt, mut negative, mut seed) = (text(fields, "prompt"), text(fields, "negative"), text(fields, "seed"));
+        let enter = crate::ai_tools_ui::prompt_fields(ui, "generative-fill", &mut prompt, &mut negative, &mut seed, width);
+        fields.insert("prompt".into(), json!(prompt));
+        fields.insert("negative".into(), json!(negative));
+        fields.insert("seed".into(), json!(seed));
+        enter
+    };
     ui.add_space(6.0);
     // Model.
     ui.horizontal(|ui| {
@@ -200,7 +270,12 @@ pub fn body(app: &mut PhotocraftApp, ui: &mut egui::Ui, fields: &mut Map<String,
         });
     } else if previews.is_empty() {
         ui.add_space(4.0);
-        ui.label(egui::RichText::new(tl!("Press + (or Enter in the prompt) to make a variation, or OK to fill with one.")).color(t.text_dim).size(12.0));
+        let hint = if sharpen(fields) {
+            tl!("Press + to make a variation, or OK to sharpen with one. Seeds change the result with Stable Diffusion models.")
+        } else {
+            tl!("Press + (or Enter in the prompt) to make a variation, or OK to fill with one.")
+        };
+        ui.label(egui::RichText::new(hint).color(t.text_dim).size(12.0));
     }
     if let Some(e) = fields.get("error").and_then(Value::as_str) {
         ui.add_space(4.0);
@@ -238,13 +313,13 @@ pub fn confirm(app: &mut PhotocraftApp, fields: &Map<String, Value>) -> Result<V
     }
     let _ = app.run("edit.generativeFill.cancel", json!({}));
     let p = params(app, fields, false);
-    app.run(COMMAND, p)
+    app.run(command(fields), p)
 }
 
 /// Cancel: stops a variation being made and takes back the one shown.
 pub fn cancel(app: &mut PhotocraftApp, fields: &Map<String, Value>) {
     remember(app, fields);
-    if let Some(j) = app.session.active_job().filter(|j| j.label == "Generative Fill") {
+    if let Some(j) = app.session.active_job().filter(|j| j.label == label(fields)) {
         app.session.cancel_job(j.id);
     }
     let _ = app.run("edit.generativeFill.cancel", json!({}));

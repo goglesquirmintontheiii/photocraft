@@ -155,6 +155,12 @@ pub(crate) fn invoke_unguarded(app: &mut PhotocraftApp, ctx: &egui::Context, id:
     if let Some(r) = crate::prefs_ui::invoke(app, ctx, id, &params) {
         return r;
     }
+    // Save for Web's dialog would export the committed document, not the open Free Transform (#6737).
+    if id == crate::transform_tool::SAVE_FOR_WEB
+        && let Some(r) = crate::transform_tool::intercept(app, id)
+    {
+        return r;
+    }
     // Save for Web, Print and the other File-menu dialogs added with slices.
     if let Some(r) = crate::file_ui::invoke(app, ctx, id, &params) {
         return r;
@@ -210,6 +216,7 @@ pub(crate) fn invoke_unguarded(app: &mut PhotocraftApp, ctx: &egui::Context, id:
         // Edit › Generative Fill… opens its dialog; with parameters it runs at once (actions,
         // agents).
         "edit.generativeFill" if params.as_object().is_none_or(|o| o.is_empty()) => crate::generative_fill_ui::open(app),
+        "edit.generativeSharpen" if params.as_object().is_none_or(|o| o.is_empty()) => crate::generative_fill_ui::open_sharpen(app),
         "file.new" if params.as_object().is_none_or(|o| o.is_empty()) => {
             let fields = app.new_document_fields();
             let d = app.ui.open_dialog(DialogKind::NewDocument, fields);

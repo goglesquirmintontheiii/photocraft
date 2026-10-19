@@ -24,6 +24,8 @@ pub enum JobState {
     /// Looking up what a link points at.
     Resolving,
     Running,
+    /// Making a checkpoint into a runnable pipeline (progress in thousandths in `done_bytes`).
+    Preparing,
     Done,
     Failed(String),
     Cancelled,
@@ -48,7 +50,7 @@ pub struct Job {
 
 impl Job {
     pub fn active(&self) -> bool {
-        matches!(self.state, JobState::Resolving | JobState::Running)
+        matches!(self.state, JobState::Resolving | JobState::Running | JobState::Preparing)
     }
 
     /// 0–1, when the total is known.
@@ -107,7 +109,20 @@ impl Manager {
     pub fn open(dir: &Path) -> Result<Manager> {
         let store = Store::open(dir)?;
         crate::accounts::load(dir);
+        crate::infer::set_device(load_device(dir));
         Ok(Manager { inner: Arc::new(Mutex::new(Inner { store, jobs: Vec::new(), next: 1 })) })
+    }
+
+    /// Where models run (saved with the models).
+    pub fn device(&self) -> crate::infer::Device {
+        crate::infer::device()
+    }
+
+    pub fn set_device(&self, d: crate::infer::Device) -> Result<()> {
+        crate::infer::set_device(d);
+        let path = self.dir().join(SETTINGS);
+        let text = serde_json::json!({"device": d.id()}).to_string();
+        std::fs::write(&path, text).map_err(|e| Error::io("Couldn't save the AI settings", e))
     }
 
     fn lock(&self) -> MutexGuard<'_, Inner> {
@@ -170,6 +185,68 @@ impl Manager {
             inner.store.set_enabled(id, k, on)?;
         }
         Ok(())
+    }
+
+    /// Makes a model that is a Stable Diffusion checkpoint into a runnable pipeline in its folder
+    /// (once; the checkpoint is then removed: the pipeline holds its weights). Returns the
+    /// model's files. A model that needs nothing done returns at once. `report` gets 0–1 and
+    /// returns false to cancel.
+    pub fn prepare(&self, id: &str, report: &mut dyn FnMut(f32) -> bool) -> Result<Vec<PathBuf>> {
+        static BUSY: Mutex<Vec<String>> = Mutex::new(Vec::new());
+        let files = self.files_of(id).ok_or_else(|| Error::NotFound("That model isn't installed.".into()))?;
+        let Some(ckpt) = crate::convert::checkpoint_to_convert(&files).cloned() else { return Ok(files) };
+        {
+            let mut busy = BUSY.lock().unwrap_or_else(PoisonError::into_inner);
+            if busy.iter().any(|b| b == id) {
+                return Err(Error::Invalid("This model is already being prepared; try again when it's done.".into()));
+            }
+            busy.push(id.to_string());
+        }
+        let r = self.convert_model(id, &ckpt, report);
+        BUSY.lock().unwrap_or_else(PoisonError::into_inner).retain(|b| b != id);
+        r
+    }
+
+    fn convert_model(&self, id: &str, ckpt: &Path, report: &mut dyn FnMut(f32) -> bool) -> Result<Vec<PathBuf>> {
+        let (dir, vae_from) = {
+            let inner = self.lock();
+            // A VAE to borrow for checkpoints without one: any installed pipeline's.
+            let vae_from: Vec<PathBuf> = inner
+                .store
+                .models()
+                .iter()
+                .map(|m| inner.store.model_dir(&m.id))
+                .filter(|d| d.join("vae_decoder").join("model.onnx").is_file() && d.join("vae_encoder").join("model.onnx").is_file())
+                .collect();
+            (inner.store.model_dir(id), vae_from)
+        };
+        let work = dir.join("converting");
+        let _ = std::fs::remove_dir_all(&work);
+        let written = match crate::convert::convert(ckpt, &work, &vae_from, &crate::convert::Options::default(), report) {
+            Ok(w) => w,
+            Err(e) => {
+                let _ = std::fs::remove_dir_all(&work);
+                return Err(e);
+            }
+        };
+        // Into place, then the manifest, then the checkpoint goes.
+        for f in &written {
+            let (from, to) = (work.join(f), dir.join(f));
+            if let Some(parent) = to.parent() {
+                std::fs::create_dir_all(parent).map_err(|e| Error::io("Couldn't create a folder for the model", e))?;
+            }
+            std::fs::rename(&from, &to).map_err(|e| Error::io("Couldn't move the prepared model into place", e))?;
+        }
+        let _ = std::fs::remove_dir_all(&work);
+        crate::infer::net::forget(&dir);
+        {
+            let mut inner = self.lock();
+            inner.store.set_files(id, written.clone())?;
+        }
+        let _ = std::fs::remove_file(ckpt);
+        let mut inner = self.lock();
+        inner.store.refresh_size(id);
+        Ok(written.iter().map(|f| dir.join(f)).collect())
     }
 
     pub fn rename(&self, id: &str, name: &str) -> Result<()> {
@@ -421,8 +498,34 @@ impl Manager {
         })();
         if result.is_err() {
             let _ = std::fs::remove_dir_all(&staging);
+            return result;
         }
-        result
+        self.after_install(id, cancel, &model_id, kinds)
+    }
+
+    /// A checkpoint for prompted fills is prepared right away, in the same job, so its first use
+    /// isn't slow. If it can't be (an SDXL checkpoint …), the model stays and the job says why.
+    fn after_install(&self, id: JobId, cancel: &AtomicBool, model_id: &str, kinds: &[ModelKind]) -> Result<()> {
+        let wants_pipeline = kinds.iter().any(|k| matches!(k, ModelKind::Inpainting | ModelKind::Enhance));
+        let files = self.files_of(model_id).unwrap_or_default();
+        if !wants_pipeline || crate::convert::checkpoint_to_convert(&files).is_none() {
+            return Ok(());
+        }
+        self.update(id, |j| {
+            j.state = JobState::Preparing;
+            j.started = Instant::now();
+            j.done_bytes = 0;
+            j.total_bytes = Some(1000);
+        });
+        let mut last = Instant::now();
+        self.prepare(model_id, &mut |f| {
+            if last.elapsed().as_millis() >= 200 {
+                last = Instant::now();
+                self.update(id, |j| j.done_bytes = (f * 1000.0) as u64);
+            }
+            !cancel.load(Ordering::Relaxed)
+        })
+        .map(|_| ())
     }
 
     fn copy_and_install(&self, id: JobId, cancel: &AtomicBool, files: &[(PathBuf, String)], name: String, kinds: &[ModelKind], source: String) -> Result<()> {
@@ -475,8 +578,9 @@ impl Manager {
         })();
         if result.is_err() {
             let _ = std::fs::remove_dir_all(&staging);
+            return result;
         }
-        result
+        self.after_install(id, cancel, &model_id, kinds)
     }
 }
 
@@ -499,6 +603,17 @@ fn spawn(f: impl FnOnce() + Send + 'static) {
     if let Err(e) = r {
         log::error!("couldn't start a model download thread: {e}");
     }
+}
+
+/// The AI settings beside the models (where they run).
+const SETTINGS: &str = "settings.json";
+
+fn load_device(dir: &Path) -> crate::infer::Device {
+    std::fs::read_to_string(dir.join(SETTINGS))
+        .ok()
+        .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+        .and_then(|v| v.get("device").and_then(serde_json::Value::as_str).and_then(crate::infer::Device::from_id))
+        .unwrap_or_default()
 }
 
 #[cfg(test)]
@@ -579,6 +694,29 @@ mod tests {
     }
 
     #[test]
+    fn a_checkpoint_for_generative_fill_is_prepared_when_imported() {
+        let dir = temp("ckpt");
+        let src = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/tiny_sd1_ckpt.safetensors");
+        let copy = dir.join("tiny.safetensors");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::copy(&src, &copy).unwrap();
+        let m = Manager::open(&dir.join("Models")).unwrap();
+        let id = m.import_files(&[copy], &[ModelKind::Inpainting], None).unwrap();
+        let job = wait(&m, id);
+        assert_eq!(job.state, JobState::Done, "{job:?}");
+        let installed = m.installed();
+        let files = &installed[0].files;
+        assert!(files.contains(&"unet/model.onnx".to_string()) && files.contains(&"tokenizer/vocab.json".to_string()), "{files:?}");
+        assert!(!files.iter().any(|f| f.ends_with(".safetensors")), "the checkpoint goes once converted");
+        let model = crate::infer::Model { name: "t".into(), files: m.files_of(&installed[0].id).unwrap(), catalog_id: None };
+        assert!(crate::infer::diffusion::is_pipeline(&model));
+        assert!(!dir.join("Models").join(&installed[0].id).join("tiny.safetensors").exists());
+        // Already prepared: nothing more to do.
+        assert_eq!(m.prepare(&installed[0].id, &mut |_| true).unwrap().len(), files.len());
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
     fn bad_imports_fail_without_leaving_files() {
         let dir = temp("bad");
         let m = Manager::open(&dir).unwrap();
@@ -589,6 +727,18 @@ mod tests {
         assert!(m.import_link("Acly/MobileSAM", &[], None).is_err(), "an import needs a use");
         assert!(m.download("no-such-model").is_err());
         assert!(!dir.join(crate::store::STAGING).exists() || std::fs::read_dir(dir.join(crate::store::STAGING)).unwrap().next().is_none());
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn the_device_is_saved_with_the_models() {
+        let dir = temp("device");
+        let m = Manager::open(&dir).unwrap();
+        m.set_device(crate::infer::Device::Npu).unwrap();
+        assert_eq!(load_device(&dir), crate::infer::Device::Npu);
+        m.set_device(crate::infer::Device::Auto).unwrap();
+        std::fs::write(dir.join(SETTINGS), "{broken").unwrap();
+        assert_eq!(load_device(&dir), crate::infer::Device::Auto, "a damaged file is the default");
         let _ = std::fs::remove_dir_all(dir);
     }
 

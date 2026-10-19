@@ -203,6 +203,9 @@ fn is_pixel_param_of(command: &str, key: &str) -> bool {
 /// Sharpen, Sharpen More, Sharpen Edges, Find Edges, Emboss and Despeckle use fixed one-pixel
 /// kernels with no size parameter, so a proxy changes their look: edges average away, making
 /// the sharpening and edge detection invisible. These must preview at full resolution (#3929).
+///
+/// Content-Aware Fill searches for matching patches, and the matches found on a reduced copy
+/// differ from those found at full size, so its preview would not show what OK writes (#6530).
 const FULL_RESOLUTION_PREVIEW: &[&str] = &[
     "filter.distort.ripple",
     "filter.stylize.diffuse",
@@ -225,6 +228,7 @@ const FULL_RESOLUTION_PREVIEW: &[&str] = &[
     "filter.stylize.findEdges",
     "filter.stylize.emboss",
     "filter.noise.despeckle",
+    "edit.contentAwareFill",
 ];
 
 /// Whether `command` with `params` previews at full resolution: [`FULL_RESOLUTION_PREVIEW`], every
@@ -811,7 +815,7 @@ pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
                         ui.add_space(4.0);
                     } else {
                         // A double-click on the slider puts it back to the filter's default.
-                        let gestures = crate::widgets::RowGestures { reset: Some(default), wheel_step: None };
+                        let gestures = crate::widgets::RowGestures { reset: Some(default), wheel_step: None, ..Default::default() };
                         crate::widgets::slider_row_with(ui, &label(&p.key), &mut v, min..=max, unit, None, gestures);
                     }
                 });
@@ -2092,6 +2096,15 @@ mod tests {
         // Without dithering, the colour-mode conversions keep the proxy.
         assert_eq!(preview_factor("image.mode.indexedColor", &json!({"dither": "none"}), 4), 4);
         assert_eq!(preview_factor("image.mode.bitmap", &json!({"method": "threshold"}), 4), 4);
+    }
+
+    /// #6530: the Content-Aware Fill preview runs at full resolution, for every Sampling choice,
+    /// because its patch search finds different matches on a reduced copy.
+    #[test]
+    fn content_aware_fill_previews_at_full_resolution() {
+        for params in [json!({}), json!({"sampling": "auto"}), json!({"sampling": "rectangular"})] {
+            assert_eq!(preview_factor("edit.contentAwareFill", &params, 4), 1, "{params}");
+        }
     }
 
     /// #2063: proxy previews scaled what isn't a length (Tree's canvas fraction, Lens Correction's

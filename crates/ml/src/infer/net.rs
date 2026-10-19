@@ -197,12 +197,23 @@ mod ort_impl {
         [exe_dir.join(name), exe_dir.join("../lib").join(name)].into_iter().find(|p| p.exists()).unwrap_or_else(|| exe_dir.join(name))
     }
 
-    /// GPU execution providers this build has, best first.
-    fn gpu_providers() -> Vec<(&'static str, ExecutionProviderDispatch)> {
+    /// The accelerators to try for the chosen device, best first (the CPU comes after them).
+    fn providers() -> Vec<(&'static str, ExecutionProviderDispatch)> {
         #[allow(unused_mut)]
         let mut v: Vec<(&'static str, ExecutionProviderDispatch)> = Vec::new();
+        let device = crate::infer::device();
+        if device == crate::infer::Device::Cpu {
+            return v;
+        }
         #[cfg(feature = "directml")]
-        v.push(("DirectML", ep::DirectML::default().build().error_on_failure()));
+        if device == crate::infer::Device::Npu {
+            v.push(("NPU", ep::DirectML::default().with_device_filter(ep::directml::DeviceFilter::Npu).build().error_on_failure()));
+        }
+        #[cfg(feature = "directml")]
+        v.push((
+            "DirectML",
+            ep::DirectML::default().with_performance_preference(ep::directml::PerformancePreference::HighPerformance).build().error_on_failure(),
+        ));
         #[cfg(feature = "cuda")]
         v.push(("CUDA", ep::CUDA::default().build().error_on_failure()));
         #[cfg(feature = "webgpu")]
@@ -230,8 +241,9 @@ mod ort_impl {
 
     pub struct OrtNet {
         path: PathBuf,
-        /// The session and where it runs; a GPU session that fails to run is swapped for a CPU one.
-        session: Mutex<(Session, &'static str)>,
+        /// The session, where it runs, and that place's index in [`providers`] (its length for
+        /// the CPU); a session that fails to run moves to the next place.
+        session: Mutex<(Session, &'static str, usize)>,
         inputs: Vec<Port>,
         outputs: Vec<Port>,
     }
@@ -243,48 +255,41 @@ mod ort_impl {
             .and_then(|mut b| b.commit_from_file(path))
     }
 
-    impl Loader for Ort {
-        fn load(&self, path: &Path) -> Result<Arc<dyn Network>> {
-            let env = environment()?;
-            let mut last = String::new();
-            let mut found: Option<(Session, &'static str)> = None;
-            if crate::infer::gpu_allowed() {
-                for (name, provider) in gpu_providers() {
-                    let attempt = Session::builder(env)
-                        .and_then(|b| b.with_optimization_level(GraphOptimizationLevel::Level3).map_err(ort::Error::from))
-                        .and_then(|b| b.with_memory_pattern(false).map_err(ort::Error::from))
-                        .and_then(|b| b.with_parallel_execution(false).map_err(ort::Error::from))
-                        .and_then(|b| b.with_execution_providers([provider]).map_err(ort::Error::from))
-                        .and_then(|mut b| b.commit_from_file(path));
-                    match attempt {
-                        Ok(s) => {
-                            found = Some((s, name));
-                            break;
-                        }
-                        Err(e) => {
-                            log::info!("{name} can't run {}: {e}; trying the next option", path.display());
-                            last = e.to_string();
-                        }
-                    }
+    /// A session for `path` on the first place from `start` on that loads it (the CPU last).
+    fn open(path: &Path, start: usize) -> Result<(Session, &'static str, usize)> {
+        let env = environment()?;
+        let mut last = String::new();
+        let list = providers();
+        let n = list.len();
+        for (i, (name, provider)) in list.into_iter().enumerate().skip(start) {
+            let attempt = Session::builder(env)
+                .and_then(|b| b.with_optimization_level(GraphOptimizationLevel::Level3).map_err(ort::Error::from))
+                .and_then(|b| b.with_memory_pattern(false).map_err(ort::Error::from))
+                .and_then(|b| b.with_parallel_execution(false).map_err(ort::Error::from))
+                .and_then(|b| b.with_execution_providers([provider]).map_err(ort::Error::from))
+                .and_then(|mut b| b.commit_from_file(path));
+            match attempt {
+                Ok(s) => return Ok((s, name, i)),
+                Err(e) => {
+                    log::info!("{name} can't run {}: {e}; trying the next option", path.display());
+                    last = e.to_string();
                 }
             }
-            let (session, backend) = match found {
-                Some(f) => f,
-                None => {
-                    let s = cpu_session(env, path).map_err(|e| {
-                        let file = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-                        Error::Invalid(format!(
-                            "{file} couldn't be loaded as an ONNX model: {e}{}",
-                            if last.is_empty() { String::new() } else { format!(" ({last})") }
-                        ))
-                    })?;
-                    (s, "CPU")
-                }
-            };
+        }
+        let s = cpu_session(env, path).map_err(|e| {
+            let file = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+            Error::Invalid(format!("{file} couldn't be loaded as an ONNX model: {e}{}", if last.is_empty() { String::new() } else { format!(" ({last})") }))
+        })?;
+        Ok((s, "CPU", n))
+    }
+
+    impl Loader for Ort {
+        fn load(&self, path: &Path) -> Result<Arc<dyn Network>> {
+            let (session, backend, idx) = open(path, 0)?;
             log::info!("loaded {} on {backend}", path.display());
             let inputs = session.inputs().iter().map(|o| port(o.name(), o.dtype())).collect();
             let outputs = session.outputs().iter().map(|o| port(o.name(), o.dtype())).collect();
-            Ok(Arc::new(OrtNet { path: path.to_path_buf(), session: Mutex::new((session, backend)), inputs, outputs }))
+            Ok(Arc::new(OrtNet { path: path.to_path_buf(), session: Mutex::new((session, backend, idx)), inputs, outputs }))
         }
     }
 
@@ -351,22 +356,22 @@ mod ort_impl {
                 Ok(values)
             };
             let mut guard = self.session.lock().unwrap_or_else(PoisonError::into_inner);
-            let first = {
-                let (session, _) = &mut *guard;
-                session.run(make(&inputs)?).map(|out| self.collect(&out))
-            };
-            match first {
-                Ok(r) => Ok(r),
-                Err(e) if guard.1 != "CPU" => {
-                    // A GPU that loaded the model but can't run it: run it on the CPU from now on.
-                    log::warn!("{} failed on {} ({e}); running it on the CPU instead", self.path.display(), guard.1);
-                    let cpu = cpu_session(environment()?, &self.path).map_err(|e| Error::Invalid(format!("The model couldn't run: {e}")))?;
-                    *guard = (cpu, "CPU");
-                    let (session, _) = &mut *guard;
-                    let out = session.run(make(&inputs)?).map_err(|e| Error::Invalid(format!("The model couldn't run: {e}")))?;
-                    Ok(self.collect(&out))
+            loop {
+                let result = {
+                    let (session, ..) = &mut *guard;
+                    session.run(make(&inputs)?).map(|out| self.collect(&out))
+                };
+                match result {
+                    Ok(r) => return Ok(r),
+                    Err(e) if guard.1 != "CPU" => {
+                        // Loaded there but can't run it: the next place from now on (an NPU's
+                        // next is the GPU, the GPU's the CPU).
+                        let (from, next) = (guard.1, guard.2 + 1);
+                        log::warn!("{} failed on {from} ({e}); trying the next option", self.path.display());
+                        *guard = open(&self.path, next).map_err(|e| Error::Invalid(format!("The model couldn't run: {e}")))?;
+                    }
+                    Err(e) => return Err(Error::Invalid(format!("The model couldn't run: {e}"))),
                 }
-                Err(e) => Err(Error::Invalid(format!("The model couldn't run: {e}"))),
             }
         }
     }

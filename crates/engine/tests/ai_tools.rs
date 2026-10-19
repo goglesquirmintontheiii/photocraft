@@ -232,3 +232,88 @@ fn generative_fill_variations_replace_each_other_and_cancel_or_keep() {
     let st = s.active().unwrap();
     assert_eq!(st.active_layer.and_then(|id| st.doc.layer(id)).unwrap().name, "Generative Fill");
 }
+
+#[test]
+fn a_checkpoint_installed_before_it_could_run_is_prepared_on_first_use() {
+    if !runtime() {
+        return;
+    }
+    let m = models("ckpt-first-use", "tiny_sd1_ckpt.safetensors", &[ModelKind::Other]);
+    let id = m.installed()[0].id.clone();
+    m.set_kinds(&id, &[ModelKind::Inpainting]).unwrap();
+    assert!(m.installed()[0].files.iter().any(|f| f.ends_with(".safetensors")));
+    let mut s = doc();
+    s.set_models(Some(m.clone()));
+    let before = px(&s, 70, 40);
+    let r = s.execute("paint.generativeInfill", json!({"points": [[70, 30], [70, 50]], "size": 16, "prompt": "a cat", "seed": 3, "steps": 2})).unwrap();
+    assert_eq!(r["seed"], 3, "{r}");
+    assert_ne!(px(&s, 70, 40), before);
+    assert!(m.installed()[0].files.iter().any(|f| f == "unet/model.onnx"), "prepared in place");
+}
+
+#[test]
+fn generative_enhance_and_sharpen_redraw_the_area() {
+    if !runtime() {
+        return;
+    }
+    // A super-resolution network: the brush.
+    let mut s = doc();
+    s.set_models(Some(models("sr", "sr_x2_like.onnx", &[ModelKind::Enhance])));
+    assert!(s.is_enabled("paint.generativeEnhance"));
+    let r = s.execute("paint.generativeEnhance", json!({"points": [[25, 30], [25, 50]], "size": 20, "detail": 0.8})).unwrap();
+    assert!(r.get("damage").is_some(), "{r}");
+    assert_eq!(r["seed"], serde_json::Value::Null, "seeds don't apply to a network");
+    s.execute("edit.undo", json!({})).unwrap();
+    assert!(s.execute("paint.generativeEnhance", json!({"points": [[25, 30]], "detail": 2})).is_err());
+    // A diffusion pipeline: Generative Sharpen's variations.
+    let mut s = doc();
+    let m = diffusion_models("sd-sharpen");
+    let id = m.installed()[0].id.clone();
+    m.set_kinds(&id, &[ModelKind::Enhance]).unwrap();
+    s.set_models(Some(m));
+    s.execute("select.rect", json!({"x": 10, "y": 10, "width": 40, "height": 40})).unwrap();
+    let layers = layer_count(&s);
+    let a = s.execute("edit.generativeSharpen", json!({"steps": 4, "preview": true, "seed": 1})).unwrap();
+    assert_eq!(a["variation"], 0, "{a}");
+    let b = s.execute("edit.generativeSharpen", json!({"steps": 4, "preview": true, "seed": 2})).unwrap();
+    assert_eq!(b["count"], 2);
+    assert_eq!(layer_count(&s), layers + 1);
+    assert_eq!(s.execute("edit.generativeFill.variations", json!({})).unwrap()["kind"], "sharpen");
+    let st = s.active().unwrap();
+    assert_eq!(st.active_layer.and_then(|l| st.doc.layer(l)).unwrap().name, "Generative Sharpen");
+    s.execute("edit.generativeFill.cancel", json!({})).unwrap();
+    assert_eq!(layer_count(&s), layers);
+}
+
+#[test]
+fn a_stroke_over_an_object_selects_it() {
+    let mut s = doc();
+    assert!(s.execute("select.aiObject", json!({"points": []})).is_err());
+    assert!(s.execute("select.aiObject", json!({"points": [[1, "x"]]})).is_err());
+    if !runtime() {
+        return;
+    }
+    s.set_models(Some(models("matte-stroke", "matte_like_fp16.onnx", &[ModelKind::Segmentation])));
+    let pts: Vec<serde_json::Value> = (0..40).map(|i| json!([60 + i / 2, 30 + i])).collect();
+    let r = s.execute("select.aiObject", json!({"points": pts})).unwrap();
+    assert_eq!(r["changed"], true, "{r}");
+    // The fixture "finds" bright pixels: the white canvas, not the black bar.
+    assert!(selected(&s, 70, 40) > 0.9);
+    assert!(selected(&s, 25, 40) < 0.1);
+}
+
+#[test]
+fn an_sdxl_checkpoint_fills_after_it_is_prepared() {
+    if !runtime() {
+        return;
+    }
+    let m = models("sdxl-ckpt", "tiny_sdxl_ckpt.safetensors", &[ModelKind::Inpainting]);
+    assert!(m.installed()[0].files.iter().any(|f| f == "text_encoder_2/model.onnx"), "{:?}", m.installed()[0].files);
+    let mut s = doc();
+    s.set_models(Some(m));
+    let before = px(&s, 70, 40);
+    let r = s.execute("paint.generativeInfill", json!({"points": [[70, 30], [70, 50]], "size": 16, "prompt": "a cat", "negativePrompt": "a dog", "seed": 5, "steps": 2})).unwrap();
+    assert_eq!(r["seed"], 5, "{r}");
+    assert_ne!(px(&s, 70, 40), before);
+    assert_eq!(px(&s, 95, 5), [1.0, 1.0, 1.0, 1.0], "outside the stroke, unchanged");
+}

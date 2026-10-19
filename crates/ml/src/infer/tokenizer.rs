@@ -20,6 +20,12 @@ pub struct ClipTokenizer {
     pad: i64,
 }
 
+/// The 256 byte symbols in CLIP's vocabulary order: the printable bytes first, then the rest.
+fn byte_order() -> Vec<u8> {
+    let printable = |b: u8| (b'!'..=b'~').contains(&b) || (0xA1..=0xAC).contains(&b) || b >= 0xAE;
+    (0u8..=255).filter(|b| printable(*b)).chain((0u8..=255).filter(|b| !printable(*b))).collect()
+}
+
 /// GPT-2's reversible byte → printable character table.
 fn byte_chars() -> [char; 256] {
     let mut table = ['\0'; 256];
@@ -46,6 +52,23 @@ fn token_of(v: &Value) -> Option<String> {
         Value::Object(o) => o.get("content").and_then(Value::as_str).map(str::to_string),
         _ => None,
     }
+}
+
+/// The CLIP BPE merges (the first 48 894 of OpenAI CLIP's `bpe_simple_vocab_16e6`, MIT),
+/// for pipelines made from checkpoints, which carry no tokenizer.
+pub const CLIP_MERGES: &str = include_str!("../../data/clip-merges.txt");
+
+/// CLIP's vocabulary in id order, rebuilt from its merges as CLIP does: the 256 byte symbols,
+/// the same with `</w>`, every merge, then the start and end tokens.
+pub fn clip_vocab(merges: &str) -> Vec<String> {
+    let table = byte_chars();
+    let bytes: Vec<char> = byte_order().into_iter().map(|b| table[usize::from(b)]).collect();
+    let mut v: Vec<String> = bytes.iter().map(|c| c.to_string()).collect();
+    v.extend(bytes.iter().map(|c| format!("{c}</w>")));
+    v.extend(merges.lines().filter(|l| !l.starts_with("#version")).take(49_152 - 256 - 2).filter_map(|l| l.split_once(' ').map(|(a, b)| format!("{a}{b}"))));
+    v.push("<|startoftext|>".into());
+    v.push("<|endoftext|>".into());
+    v
 }
 
 impl ClipTokenizer {
@@ -231,6 +254,20 @@ mod tests {
         assert_eq!(ids.len(), LENGTH);
         assert_eq!(ids.last(), Some(&11));
         assert_eq!(ids.first(), Some(&10));
+    }
+
+    #[test]
+    fn the_bundled_vocabulary_is_clips() {
+        let v = clip_vocab(CLIP_MERGES);
+        assert_eq!(v.len(), 49_408);
+        assert_eq!(v[0], "!");
+        assert_eq!(v[256], "!</w>");
+        assert_eq!(v[49_406], "<|startoftext|>");
+        assert_eq!(v[49_407], "<|endoftext|>");
+        let vocab: HashMap<String, i64> = v.iter().enumerate().map(|(i, t)| (t.clone(), i as i64)).collect();
+        let t = ClipTokenizer::new(vocab, CLIP_MERGES, None).unwrap();
+        // "a photo of a cat" in CLIP's own ids.
+        assert_eq!(t.encode("a photo of a cat").get(..7).unwrap(), &[49406, 320, 1125, 539, 320, 2368, 49407]);
     }
 
     #[test]

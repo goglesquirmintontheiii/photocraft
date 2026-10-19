@@ -27,8 +27,9 @@ pub(crate) struct Pending {
 /// The use a tool's models are for.
 pub fn kind_of(tool: Tool) -> Option<ModelKind> {
     match tool {
-        Tool::AiObjectSelection => Some(ModelKind::Segmentation),
+        Tool::AiObjectSelection | Tool::ObjectSelectionBrush => Some(ModelKind::Segmentation),
         Tool::GenerativeInfill => Some(ModelKind::Inpainting),
+        Tool::GenerativeEnhance => Some(ModelKind::Enhance),
         Tool::GenerativeRemoval => Some(ModelKind::Removal),
         Tool::ReflectionRemoval => Some(ModelKind::Reflection),
         _ => None,
@@ -38,8 +39,9 @@ pub fn kind_of(tool: Tool) -> Option<ModelKind> {
 fn chosen_model(app: &mut PhotocraftApp, tool: Tool) -> Option<&mut String> {
     let o = &mut app.ui.tool_options;
     match tool {
-        Tool::AiObjectSelection => Some(&mut o.ai_select_model),
+        Tool::AiObjectSelection | Tool::ObjectSelectionBrush => Some(&mut o.ai_select_model),
         Tool::GenerativeInfill => Some(&mut o.infill_model),
+        Tool::GenerativeEnhance => Some(&mut o.enhance_model),
         Tool::GenerativeRemoval => Some(&mut o.gen_removal_model),
         Tool::ReflectionRemoval => Some(&mut o.reflection_model),
         _ => None,
@@ -94,7 +96,7 @@ pub fn finish_ai_object_selection(app: &mut PhotocraftApp, start: [f64; 2], end:
         (false, true) => "subtract",
         (false, false) => "replace",
     };
-    let mut p = json!({"mode": mode, "sampleAllLayers": app.ui.tool_options.sample_all_layers, "model": model_param(app, Tool::AiObjectSelection)});
+    let mut p = json!({"mode": mode, "sampleAllLayers": app.ui.tool_options.sample_all.ai_object_selection, "model": model_param(app, Tool::AiObjectSelection)});
     if w < 2.0 || h < 2.0 {
         p["point"] = json!([end[0], end[1]]);
     } else {
@@ -105,9 +107,22 @@ pub fn finish_ai_object_selection(app: &mut PhotocraftApp, start: [f64; 2], end:
 }
 
 /// A Generative Brush stroke ended: fill it with the brush's model. Returns false for other tools.
-pub fn finish_stroke(app: &mut PhotocraftApp, tool: Tool, points: &[[f64; 3]]) -> bool {
+pub fn finish_stroke(app: &mut PhotocraftApp, tool: Tool, points: &[[f64; 3]], mods: egui::Modifiers) -> bool {
+    if tool == Tool::ObjectSelectionBrush {
+        app.trail = None;
+        if no_models(app, tool) {
+            return true;
+        }
+        let mode = crate::tool_feedback::selection_mode(tool, 0, mods);
+        let pts: Vec<[f64; 2]> = points.iter().map(|p| [p[0], p[1]]).collect();
+        let p = json!({"points": pts, "mode": mode, "sampleAllLayers": app.ui.tool_options.sample_all.object_selection_brush, "model": model_param(app, tool)});
+        let r = app.run("select.aiObject", p);
+        crate::retouch_ui::report_smart_result(app, r, tl!("The Object Selection Brush found nothing there — paint over more of the object"));
+        return true;
+    }
     let cmd = match tool {
         Tool::GenerativeInfill => "paint.generativeInfill",
+        Tool::GenerativeEnhance => "paint.generativeEnhance",
         Tool::GenerativeRemoval => "paint.generativeRemoval",
         Tool::ReflectionRemoval => "paint.reflectionRemoval",
         _ => return false,
@@ -117,7 +132,7 @@ pub fn finish_stroke(app: &mut PhotocraftApp, tool: Tool, points: &[[f64; 3]]) -
         return true;
     }
     let o = &app.ui.tool_options;
-    let mut p = json!({"points": points, "sampleAllLayers": o.sample_all_layers, "newLayer": o.gen_new_layer});
+    let mut p = json!({"points": points, "sampleAllLayers": o.sample_all.get(tool), "newLayer": o.gen_new_layer});
     p["model"] = model_param(app, tool);
     p["target"] = crate::canvas::paint_target(app);
     if tool == Tool::GenerativeInfill {
@@ -125,6 +140,11 @@ pub fn finish_stroke(app: &mut PhotocraftApp, tool: Tool, points: &[[f64; 3]]) -
         p["prompt"] = json!(o.infill_prompt);
         p["negativePrompt"] = json!(o.infill_negative);
         p["seed"] = parse_seed(&o.infill_seed).map_or(Value::Null, |s| json!(s));
+    }
+    if tool == Tool::GenerativeEnhance {
+        let o = &app.ui.tool_options;
+        p["detail"] = json!(o.enhance_detail.clamp(0.0, 1.0));
+        p["seed"] = parse_seed(&o.enhance_seed).map_or(Value::Null, |s| json!(s));
     }
     let trail = app.trail.take();
     match app.run(cmd, p) {
@@ -184,6 +204,37 @@ pub(crate) fn prompt_fields(ui: &mut egui::Ui, id: &str, prompt: &mut String, ne
         }
     });
     enter
+}
+
+/// Detail levels of the Enhance brush and Generative Sharpen.
+pub(crate) const DETAIL: [(&str, f32); 3] = [("Subtle", 0.25), ("Medium", 0.5), ("Strong", 0.85)];
+
+/// "Detail:" with Subtle / Medium / Strong.
+pub(crate) fn detail_menu(ui: &mut egui::Ui, id: &str, value: &mut f32) {
+    let t = Tokens::get(ui.ctx());
+    ui.label(egui::RichText::new(tl!("Detail:")).color(t.text_dim).size(12.0));
+    let mut current = DETAIL.iter().min_by(|a, b| (a.1 - *value).abs().total_cmp(&(b.1 - *value).abs())).map(|d| d.0.to_string()).unwrap_or_default();
+    let options: Vec<(String, &str)> = DETAIL.iter().map(|(n, _)| (n.to_string(), tl!(*n))).collect();
+    if crate::widgets::dropdown(ui, id, &mut current, &options, 90.0)
+        && let Some((_, v)) = DETAIL.iter().find(|(n, _)| *n == current)
+    {
+        *value = *v;
+    }
+}
+
+/// A compact seed field with a new-seed button (empty = a new seed each time).
+pub(crate) fn seed_field(ui: &mut egui::Ui, id: &str, seed: &mut String) {
+    let t = Tokens::get(ui.ctx());
+    ui.label(egui::RichText::new(tl!("Seed")).color(t.text_dim).size(12.0));
+    let bad = !seed.trim().is_empty() && parse_seed(seed).is_none();
+    let mut edit = egui::TextEdit::singleline(seed).id_salt(id).hint_text(tl!("Random")).desired_width(84.0);
+    if bad {
+        edit = edit.text_color(t.danger);
+    }
+    ui.add(edit).on_hover_text(tl!("Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time."));
+    if crate::icons::button(ui, "rotate-cw", 22.0, false, tl!("New seed")).clicked() {
+        *seed = photocraft_ml::infer::diffusion::new_seed().to_string();
+    }
 }
 
 /// Infill's Prompt button: shows the prompt (or "Prompt…") and opens its menu below.
@@ -266,7 +317,9 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) -> bo
     crate::widgets::vline(ui, 22.0);
     let t = Tokens::get(ui.ctx());
     let o = &mut app.ui.tool_options;
-    crate::widgets::checkbox(ui, &mut o.sample_all_layers, tl!("Sample All Layers"));
+    if let Some(all) = o.sample_all.slot(tool) {
+        crate::widgets::checkbox(ui, all, tl!("Sample All Layers"));
+    }
     let hint = match tool {
         Tool::AiObjectSelection => tl!("Drag a box around the object, or click it"),
         Tool::GenerativeRemoval => {
@@ -276,6 +329,14 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) -> bo
         Tool::GenerativeInfill => {
             crate::widgets::checkbox(ui, &mut o.gen_new_layer, tl!("Create a new layer"));
             tl!("Paint over the area to fill")
+        }
+        Tool::ObjectSelectionBrush => tl!("Paint over the object to select it (⇧ adds, Alt subtracts)"),
+        Tool::GenerativeEnhance => {
+            crate::widgets::vline(ui, 22.0);
+            detail_menu(ui, "enhance-detail", &mut o.enhance_detail);
+            seed_field(ui, "enhance-seed", &mut o.enhance_seed);
+            crate::widgets::checkbox(ui, &mut o.gen_new_layer, tl!("Create a new layer"));
+            tl!("Paint over a blurry or pixelated area")
         }
         _ => {
             crate::widgets::checkbox(ui, &mut o.gen_new_layer, tl!("Create a new layer"));
@@ -305,6 +366,8 @@ mod tests {
         assert_eq!(kind_of(Tool::GenerativeRemoval), Some(ModelKind::Removal));
         assert_eq!(kind_of(Tool::ReflectionRemoval), Some(ModelKind::Reflection));
         assert_eq!(kind_of(Tool::GenerativeInfill), Some(ModelKind::Inpainting));
+        assert_eq!(kind_of(Tool::GenerativeEnhance), Some(ModelKind::Enhance));
+        assert_eq!(kind_of(Tool::ObjectSelectionBrush), Some(ModelKind::Segmentation));
         assert!(Tool::GenerativeInfill.is_brushlike());
         assert_eq!(parse_seed(" 42 "), Some(42));
         assert_eq!(parse_seed(""), None);
@@ -320,11 +383,11 @@ mod tests {
         let mut app = app();
         app.ui.tool = Tool::GenerativeRemoval;
         let before = app.session.active().unwrap().doc.clone();
-        assert!(finish_stroke(&mut app, Tool::GenerativeRemoval, &[[10.0, 10.0, 1.0], [20.0, 20.0, 1.0]]));
+        assert!(finish_stroke(&mut app, Tool::GenerativeRemoval, &[[10.0, 10.0, 1.0], [20.0, 20.0, 1.0]], egui::Modifiers::NONE));
         assert!(app.ui.status_error);
         assert!(app.ui.status.contains("desktop app") || app.ui.status.contains("AI Models"), "{}", app.ui.status);
         assert!(std::sync::Arc::ptr_eq(&before, &app.session.active().unwrap().doc));
-        assert!(!finish_stroke(&mut app, Tool::Brush, &[[1.0, 1.0, 1.0]]), "not an AI brush");
+        assert!(!finish_stroke(&mut app, Tool::Brush, &[[1.0, 1.0, 1.0]], egui::Modifiers::NONE), "not an AI brush");
         finish_ai_object_selection(&mut app, [1.0, 1.0], [30.0, 30.0], egui::Modifiers::NONE);
         assert!(app.session.active().unwrap().doc.selection.is_none());
     }

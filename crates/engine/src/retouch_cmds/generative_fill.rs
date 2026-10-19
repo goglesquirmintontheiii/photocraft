@@ -7,8 +7,12 @@
 //! `edit.generativeFill.show` shows another; `.commit` keeps the one shown, `.cancel` takes it
 //! back. Every variation is generated from the document as it was before any was shown, so they
 //! never build on each other.
+//!
+//! Edit › Generative Sharpen (`edit.generativeSharpen`) works the same way without prompts: an
+//! Enhance model redraws the selection sharper and more detailed, on a new layer, with the same
+//! variations (`.show`, `.commit`, `.cancel` and `.variations` of `edit.generativeFill`).
 
-use super::generative::{WORK, filler, prompting, window_around};
+use super::generative::{CONTEXT, ENHANCE_CONTEXT, Task, filler, task, window_around, work_limit};
 use super::patch::{coverage, selection_area};
 use super::*;
 use photocraft_doc::{DocId, Layer};
@@ -18,6 +22,34 @@ use photocraft_ml::infer::Image;
 
 const CMD: &str = "edit.generativeFill";
 const LABEL: &str = "Generative Fill";
+
+/// Which dialog's variations.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Mode {
+    Fill,
+    Sharpen,
+}
+
+impl Mode {
+    fn cmd(self) -> &'static str {
+        match self {
+            Mode::Fill => CMD,
+            Mode::Sharpen => "edit.generativeSharpen",
+        }
+    }
+    fn label(self) -> &'static str {
+        match self {
+            Mode::Fill => LABEL,
+            Mode::Sharpen => "Generative Sharpen",
+        }
+    }
+    fn kind(self) -> ModelKind {
+        match self {
+            Mode::Fill => ModelKind::Inpainting,
+            Mode::Sharpen => ModelKind::Enhance,
+        }
+    }
+}
 
 /// One generated fill: the new layer's pixels over `rect` (with alpha), its seed, and a small
 /// picture of the window with it in place (RGBA, 8-bit) for the dialog's list.
@@ -50,6 +82,7 @@ impl Session {
 /// The dialog's variations for one document.
 pub(crate) struct State {
     doc: DocId,
+    mode: Mode,
     /// The document before any variation was shown: every variation is made from it.
     base: Arc<Document>,
     above: Option<LayerId>,
@@ -86,20 +119,21 @@ fn current(s: &Session) -> Option<&State> {
 }
 
 /// Generates the fill of `doc`'s selection: the layer pixels and the seed.
-fn generate(doc: &Document, fill_with: super::generative::Filler, ctx: &crate::jobs::JobCtx) -> Result<Variation> {
-    let sel = doc.selection.as_ref().ok_or_else(|| bad(CMD, "make a selection first"))?;
+fn generate(doc: &Document, fill_with: super::generative::Filler, ctx: &crate::jobs::JobCtx, mode: Mode) -> Result<Variation> {
+    let (cmd, label) = (mode.cmd(), mode.label());
+    let sel = doc.selection.as_ref().ok_or_else(|| bad(cmd, "make a selection first"))?;
     let canvas = doc.bounds();
     let area = selection_area(sel, canvas);
     if area.is_empty() {
-        return Err(bad(CMD, "the selection is empty"));
+        return Err(bad(cmd, "the selection is empty"));
     }
-    let win = window_around(area, canvas);
+    let win = window_around(area, canvas, if mode == Mode::Sharpen { ENHANCE_CONTEXT } else { CONTEXT });
     let alpha = coverage(sel, win);
     if !alpha.iter().any(|a| *a > 0.0) {
-        return Err(bad(CMD, "the selection is empty"));
+        return Err(bad(cmd, "the selection is empty"));
     }
-    if alpha.iter().all(|a| *a >= 1.0) {
-        return Err(bad(CMD, "the whole picture is selected: nothing is left around it to fill it from"));
+    if mode == Mode::Fill && alpha.iter().all(|a| *a >= 1.0) {
+        return Err(bad(cmd, "the whole picture is selected: nothing is left around it to fill it from"));
     }
     let base = doc.pixel_format();
     let fmt = PixelFormat::new(base.mode, base.sample, false);
@@ -114,11 +148,11 @@ fn generate(doc: &Document, fill_with: super::generative::Filler, ctx: &crate::j
         [c[0], c[1], c[2]].map(|v| v.clamp(0.0, 1.0))
     }).collect();
     let hole: Vec<f32> = alpha.iter().map(|a| if *a > 0.01 { 1.0 } else { 0.0 }).collect();
-    let scale = (WORK as f64 / w.max(h) as f64).min(1.0);
+    let scale = (work_limit(mode.kind()) as f64 / w.max(h) as f64).min(1.0);
     let (ww, wh) = (((w as f64 * scale).round() as usize).max(1), ((h as f64 * scale).round() as usize).max(1));
     let image = Image::new(ww, wh, infer_resize(&rgb, w, h, 3, ww, wh)).map_err(crate::ai::error)?;
     let work_hole: Vec<f32> = infer_resize(&hole, w, h, 1, ww, wh).into_iter().map(|v| if v > 0.01 { 1.0 } else { 0.0 }).collect();
-    let mut report = crate::ai::reporter(ctx, LABEL, 0.0, 0.97);
+    let mut report = crate::ai::reporter(ctx, label, 0.0, 0.97);
     let (filled, seed) = fill_with(&image, &work_hole, &mut report).map_err(crate::ai::error)?;
     ctx.check()?;
     let filled = infer_resize(&filled, ww, wh, 3, w, h);
@@ -148,7 +182,7 @@ fn generate(doc: &Document, fill_with: super::generative::Filler, ctx: &crate::j
     let (tw, th) = (((w as f64 * ts).round() as usize).max(1), ((h as f64 * ts).round() as usize).max(1));
     let small = infer_resize(&mixed, w, h, 3, tw, th);
     let bytes: Vec<u8> = small.chunks_exact(3).flat_map(|c| [c[0], c[1], c[2], 1.0].map(|v| (v.clamp(0.0, 1.0) * 255.0).round() as u8)).collect();
-    ctx.progress(1.0, LABEL);
+    ctx.progress(1.0, label);
     Ok(Variation { seed: seed.unwrap_or(0), region: Region { rect: win, ch: n, data }, thumb: (tw, th, Arc::new(bytes)) })
 }
 
@@ -170,17 +204,29 @@ fn add_layer(doc: &mut Document, above: Option<LayerId>, name: &str, v: &Variati
 }
 
 pub(super) fn generative_fill(s: &mut Session, p: &Value) -> Result<Value> {
+    run_mode(s, p, Mode::Fill)
+}
+
+pub(super) fn generative_sharpen(s: &mut Session, p: &Value) -> Result<Value> {
+    run_mode(s, p, Mode::Sharpen)
+}
+
+fn run_mode(s: &mut Session, p: &Value, mode: Mode) -> Result<Value> {
+    let (cmd, label) = (mode.cmd(), mode.label());
     let st = s.active().ok_or(EngineError::NoDocument)?;
     if st.doc.selection.is_none() {
-        return Err(bad(CMD, "make a selection first"));
+        return Err(bad(cmd, "make a selection first"));
     }
     let preview = p.get("preview").and_then(Value::as_bool).unwrap_or(false);
-    let opts = prompting(CMD, p)?;
-    let model = crate::ai::resolve(s, CMD, ModelKind::Inpainting, p)?;
-    let name = layer_name(&opts.prompt);
-    let fill_with = filler(model, ModelKind::Inpainting, Some(opts));
+    let job = task(cmd, mode.kind(), p)?;
+    let name = match (&job, mode) {
+        (Task::Prompted(opts), Mode::Fill) => layer_name(&opts.prompt),
+        _ => label.to_string(),
+    };
+    let (model, prepare) = crate::ai::resolve_prepared(s, cmd, mode.kind(), p)?;
+    let fill_with = filler(model, job, prepare);
     // Variations are all made from the document as it was before the first was shown.
-    let (base, above) = match current(s).filter(|_| preview) {
+    let (base, above) = match current(s).filter(|g| preview && g.mode == mode) {
         Some(g) => (g.base.clone(), g.above),
         None => {
             let st = s.active().ok_or(EngineError::NoDocument)?;
@@ -189,18 +235,18 @@ pub(super) fn generative_fill(s: &mut Session, p: &Value) -> Result<Value> {
     };
     crate::jobs::run(
         s,
-        LABEL,
+        label,
         true,
         {
             let base = base.clone();
             move |ctx| {
-                ctx.progress(0.0, LABEL);
-                generate(&base, fill_with, ctx)
+                ctx.progress(0.0, label);
+                generate(&base, fill_with, ctx, mode)
             }
         },
         move |s, v| {
             if !preview {
-                let (id, rect) = s.edit(LABEL, |doc, active| {
+                let (id, rect) = s.edit(label, |doc, active| {
                     let r = add_layer(doc, above, &name, &v)?;
                     *active = Some(r.0);
                     Ok(r)
@@ -211,8 +257,8 @@ pub(super) fn generative_fill(s: &mut Session, p: &Value) -> Result<Value> {
                 return Ok(json!({"layer": id.0, "seed": v.seed, "damage": damage_json(rect)}));
             }
             let doc_id = s.active().map(|st| st.doc.id).ok_or(EngineError::NoDocument)?;
-            if current(s).is_none() {
-                s.generative_fill = Some(State { doc: doc_id, base, above, name: name.clone(), variations: Vec::new(), shown: None });
+            if current(s).is_none_or(|g| g.mode != mode) {
+                s.generative_fill = Some(State { doc: doc_id, mode, base, above, name: name.clone(), variations: Vec::new(), shown: None });
             }
             let g = s.generative_fill.as_mut().ok_or_else(|| EngineError::Other("internal error: no Generative Fill state".into()))?;
             g.name = name;
@@ -228,7 +274,7 @@ fn show_variation(s: &mut Session, i: usize) -> Result<Value> {
     const SHOW: &str = "edit.generativeFill.show";
     let g = current(s).ok_or_else(|| bad(SHOW, "Generative Fill isn't open on this document, or the document changed since"))?;
     let v = g.variations.get(i).cloned().ok_or_else(|| bad(SHOW, format!("there are {} variations; `variation` is 0..{}", g.variations.len(), g.variations.len())))?;
-    let (above, name, base) = (g.above, g.name.clone(), g.base.clone());
+    let (above, name, base, label) = (g.above, g.name.clone(), g.base.clone(), g.mode.label());
     let shown_doc = g.shown.as_ref().map(|(_, d)| d.clone());
     if let (Some(d), Some(st)) = (shown_doc, s.active())
         && Arc::ptr_eq(&d, &st.doc)
@@ -240,7 +286,7 @@ fn show_variation(s: &mut Session, i: usize) -> Result<Value> {
         s.generative_fill = None;
         return Err(bad(SHOW, "the document changed since Generative Fill started"));
     }
-    let (id, rect) = s.edit(LABEL, |doc, active| {
+    let (id, rect) = s.edit(label, |doc, active| {
         let r = add_layer(doc, above, &name, &v)?;
         *active = Some(r.0);
         Ok(r)
@@ -265,6 +311,7 @@ pub(super) fn variations(s: &mut Session, _: &Value) -> Result<Value> {
     Ok(match current(s) {
         Some(g) => json!({
             "open": true,
+            "kind": if g.mode == Mode::Sharpen { "sharpen" } else { "fill" },
             "variations": g.variations.iter().map(|v| json!({"seed": v.seed})).collect::<Vec<_>>(),
             "shown": g.shown.as_ref().map(|(i, _)| *i),
         }),

@@ -23,12 +23,20 @@ use photocraft_ml::infer::{self, Image};
 pub(super) const WORK: usize = 1024;
 
 /// Context around the hole: the window is this many times the hole's larger side, square.
-const CONTEXT: f64 = 2.0;
+pub(super) const CONTEXT: f64 = 2.0;
 const MIN_WINDOW: i32 = 128;
 
-/// A square window around `area`, `CONTEXT` times its larger side, moved inside the canvas.
-pub(super) fn window_around(area: Rect, canvas: Rect) -> Rect {
-    let side = ((f64::from(area.width().max(area.height())) * CONTEXT) as i32).max(MIN_WINDOW);
+/// Context for detail passes: they look at the area itself, at the highest resolution.
+pub(super) const ENHANCE_CONTEXT: f64 = 1.25;
+
+/// The largest window side the model sees for a use (larger windows are scaled down for it).
+pub(super) fn work_limit(kind: ModelKind) -> usize {
+    if kind == ModelKind::Enhance { 2 * WORK } else { WORK }
+}
+
+/// A square window around `area`, `context` times its larger side, moved inside the canvas.
+pub(super) fn window_around(area: Rect, canvas: Rect, context: f64) -> Rect {
+    let side = ((f64::from(area.width().max(area.height())) * context) as i32).max(MIN_WINDOW);
     let side_w = side.min(canvas.width() as i32);
     let side_h = side.min(canvas.height() as i32);
     let cx = area.x0 + area.width() as i32 / 2;
@@ -82,18 +90,61 @@ pub(crate) fn prompting(cmd: &str, p: &Value) -> Result<infer::diffusion::Prompt
         None | Some(Value::Null) => d.guidance,
         Some(v) => v.as_f64().filter(|g| g.is_finite() && (1.0..=30.0).contains(g)).ok_or_else(|| bad(cmd, "`guidance` is 1..30"))? as f32,
     };
-    Ok(Prompting { prompt: text("prompt")?, negative: text("negativePrompt")?, seed, steps, guidance })
+    let strength = match p.get("strength") {
+        None | Some(Value::Null) => d.strength,
+        Some(v) => v.as_f64().filter(|g| g.is_finite() && (0.0..=1.0).contains(g)).ok_or_else(|| bad(cmd, "`strength` is 0..1"))? as f32,
+    };
+    Ok(Prompting { prompt: text("prompt")?, negative: text("negativePrompt")?, seed, steps, guidance, strength })
 }
 
 /// What fills a hole: the model run on the window's image (RGB 0–1) and hole (1 = fill), giving
 /// the filled RGB and the seed when the model takes one.
 pub(crate) type Filler = Box<dyn FnOnce(&Image, &[f32], &mut dyn FnMut(f32, &str) -> bool) -> photocraft_ml::Result<(Vec<f32>, Option<u64>)> + Send>;
 
-pub(crate) fn filler(model: infer::Model, kind: ModelKind, prompting: Option<infer::diffusion::Prompting>) -> Filler {
-    Box::new(move |img, hole, report| match (kind, prompting) {
-        (ModelKind::Inpainting, Some(opts)) => infer::diffusion::diffuse(&model, img, hole, &opts, report).map(|g| (g.rgb, Some(g.seed))),
-        _ => infer::inpaint(&model, img, hole, report).map(|rgb| (rgb, None)),
+/// What a model is asked to do with the hole.
+pub(crate) enum Task {
+    /// Fill it from what's around (Generative Removal, Reflection Removal).
+    Remove,
+    /// Fill it from a prompt (Infill, Generative Fill).
+    Prompted(infer::diffusion::Prompting),
+    /// Add detail and sharpness (Generative Enhance, Generative Sharpen).
+    Enhance(infer::enhance::Enhancing),
+}
+
+/// The task for a command of `kind`, from its parameters.
+pub(crate) fn task(cmd: &str, kind: ModelKind, p: &Value) -> Result<Task> {
+    Ok(match kind {
+        ModelKind::Inpainting => Task::Prompted(prompting(cmd, p)?),
+        ModelKind::Enhance => {
+            let opts = prompting(cmd, p)?;
+            let detail = match p.get("detail") {
+                None | Some(Value::Null) => 0.5,
+                Some(v) => v.as_f64().filter(|d| d.is_finite() && (0.0..=1.0).contains(d)).ok_or_else(|| bad(cmd, "`detail` is 0..1"))? as f32,
+            };
+            Task::Enhance(infer::enhance::Enhancing { seed: opts.seed, detail })
+        }
+        _ => Task::Remove,
     })
+}
+
+pub(crate) fn filler(mut model: infer::Model, task: Task, prepare: crate::ai::Prepare) -> Filler {
+    Box::new(move |img, hole, report| {
+        prepare.run(&mut model, report)?;
+        match task {
+            Task::Prompted(opts) => infer::diffusion::diffuse(&model, img, hole, &opts, report).map(|g| (g.rgb, Some(g.seed))),
+            Task::Enhance(opts) => infer::enhance::enhance(&model, img, hole, &opts, report),
+            Task::Remove => infer::inpaint(&model, img, hole, report).map(|rgb| (rgb, None)),
+        }
+    })
+}
+
+pub(super) fn generative_enhance(s: &mut Session, p: &Value) -> Result<Value> {
+    run(s, p, "paint.generativeEnhance", "Generative Enhance", ModelKind::Enhance)
+}
+
+pub(super) fn enhance_enabled(s: &Session) -> std::result::Result<(), String> {
+    has_pixel_layer(s)?;
+    crate::ai::enabled(s, ModelKind::Enhance)
 }
 
 pub(super) fn removal_enabled(s: &Session) -> std::result::Result<(), String> {
@@ -108,13 +159,12 @@ pub(super) fn reflection_enabled(s: &Session) -> std::result::Result<(), String>
 
 fn run(s: &mut Session, p: &Value, cmd: &'static str, label: &'static str, kind: ModelKind) -> Result<Value> {
     let mut plan = plan_for(s, p, cmd)?;
-    let model = crate::ai::resolve(s, cmd, kind, p)?;
-    let prompts = if kind == ModelKind::Inpainting { Some(prompting(cmd, p)?) } else { None };
-    let fill_with = filler(model, kind, prompts);
+    let (model, prepare) = crate::ai::resolve_prepared(s, cmd, kind, p)?;
+    let fill_with = filler(model, task(cmd, kind, p)?, prepare);
     let d = s.active().ok_or(EngineError::NoDocument)?;
     let canvas = d.doc.bounds();
     let area = plan.strokes.iter().map(stroke_bounds).reduce(|a, b| a.union(&b)).map(|r| r.intersect(&canvas)).unwrap_or(plan.window);
-    plan.window = window_around(area, canvas);
+    plan.window = window_around(area, canvas, if kind == ModelKind::Enhance { ENHANCE_CONTEXT } else { CONTEXT });
     let doc = d.doc.clone();
     let id = plan.id;
     let new_layer = plan.new_layer;
@@ -128,7 +178,7 @@ fn run(s: &mut Session, p: &Value, cmd: &'static str, label: &'static str, kind:
             move |ctx| {
                 ctx.progress(0.0, label);
                 let mut work = (*doc).clone();
-                fill(&mut work, &plan, fill_with, &p, ctx, cmd, label)
+                fill(&mut work, &plan, fill_with, &p, ctx, (cmd, label), work_limit(kind))
             }
         },
         move |s, filled| {
@@ -163,8 +213,8 @@ fn fill(
     fill_with: Filler,
     p: &Value,
     ctx: &crate::jobs::JobCtx,
-    cmd: &str,
-    label: &str,
+    (cmd, label): (&str, &str),
+    limit: usize,
 ) -> Result<Option<Filled>> {
     let hole = hole(plan, doc.selection.as_ref())?;
     if !hole.iter().any(|m| *m) {
@@ -192,7 +242,7 @@ fn fill(
     let rgba: Vec<[f32; 4]> = img.data.chunks_exact(img.ch).map(|px| to_rgba(&fmt, px)).collect();
     let rgb: Vec<f32> = rgba.iter().flat_map(|c| [c[0], c[1], c[2]].map(|v| v.clamp(0.0, 1.0))).collect();
     let holef: Vec<f32> = hole.iter().map(|m| if *m { 1.0 } else { 0.0 }).collect();
-    let scale = (WORK as f64 / w.max(h) as f64).min(1.0);
+    let scale = (limit as f64 / w.max(h) as f64).min(1.0);
     let (ww, wh) = (((w as f64 * scale).round() as usize).max(1), ((h as f64 * scale).round() as usize).max(1));
     let work_rgb = infer::resize(&rgb, w, h, 3, ww, wh);
     // Scaling down mustn't shrink thin strokes away: any coverage counts.

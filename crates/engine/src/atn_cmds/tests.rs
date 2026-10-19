@@ -130,6 +130,39 @@ fn load_maps_events_keeps_flags_and_plays() {
     assert_eq!(s.actions.list[2].set.as_deref(), Some("Other"));
 }
 
+/// Renames that chain ("A" becomes "A 2" while the file's own "A 2" becomes "A 2 2") rewrite
+/// each Play and Conditional target once, to the renamed copy of the action it named.
+#[test]
+fn load_renames_each_play_target_once() {
+    let mut s = Session::new();
+    let mut mine = Action::new("A", vec![]);
+    mine.set = Some("Mine".into());
+    s.actions.list.push(mine);
+    let a = Action::new("A", vec![("actions.conditional".into(), json!({"if": "always", "then": "A", "else": "A 2"}))]);
+    let a2 = Action::new("A 2", vec![("actions.play".into(), json!({"action": "A"}))]);
+    let keys = [("A".to_string(), "F4".to_string())];
+    let (bytes, _) = export("File", &[&a, &a2], &keys, false).unwrap();
+    let r = s.execute("actions.load", json!({"data": b64(&bytes)})).unwrap();
+    assert_eq!(r["actions"], json!(["A 2", "A 2 2"]));
+    let get = |n: &str| s.actions.list.iter().find(|a| a.name == n && a.set.as_deref() == Some("File")).unwrap();
+    assert_eq!(get("A 2 2").steps[0].1["action"], "A 2", "plays the file's A, not its A 2");
+    let cond = &get("A 2").steps[0].1;
+    assert_eq!((&cond["then"], &cond["else"]), (&json!("A 2"), &json!("A 2 2")), "{cond}");
+    assert_eq!(r["functionKeys"], json!([{"action": "A 2", "key": "F4"}]));
+
+    // Adding to a set of the same name leaves the Play steps already in it alone.
+    let mut s = Session::new();
+    for (name, steps) in [("A", vec![]), ("B", vec![("actions.play".to_string(), json!({"action": "A"}))])] {
+        let mut a = Action::new(name, steps);
+        a.set = Some("File".into());
+        s.actions.list.push(a);
+    }
+    let (bytes, _) = export("File", &[&Action::new("A", vec![])], &[], false).unwrap();
+    let r = s.execute("actions.load", json!({"data": b64(&bytes), "replace": false})).unwrap();
+    assert_eq!(r["actions"], json!(["A 2"]));
+    assert_eq!(s.actions.list[1].steps[0].1, json!({"action": "A"}), "B still plays the A it had");
+}
+
 #[test]
 fn save_round_trips_through_photoshop_events() {
     let mut s = Session::new();
@@ -144,7 +177,7 @@ fn save_round_trips_through_photoshop_events() {
     assert_eq!(file.name.to_string_lossy(), "Test Set");
     assert_eq!(file.actions[0].function_key, 3);
     let events: Vec<String> = file.actions[0].items.iter().map(|i| i.event.id()).collect();
-    assert_eq!(events, ["GsnB", "Mk  ", "setd", "slct", "slct", "Stop", "syntheticFill", "Ply ", "Fltn"]);
+    assert_eq!(events, ["GsnB", "Mk  ", "setd", "slct", "slct", "Stop", "syntheticFill", "Ply ", "FltI"]);
     assert!(file.actions[0].items[0].with_dialog);
     assert!(!file.actions[0].items[8].enabled);
     // The kept Photoshop step is written back byte for byte.
@@ -1037,6 +1070,77 @@ fn remove_white_clears_the_targeted_layer_not_the_converted_background() {
     assert!(bottom.surface().unwrap().sample_channel(2, 2, 1) > 0.99, "and kept its pixels");
 }
 
+/// Measured in Photoshop: `executeAction` fails for the codes `BoxB`, `SrfB`, `Fltn` and
+/// `BlnW` ("the command is not currently available"), while the names `boxblur`,
+/// `surfaceBlur`, `flattenImage`, `blackAndWhite` and the code `FltI` run.
+#[test]
+fn events_photoshop_only_runs_by_name_export_by_name_and_old_codes_still_import() {
+    let bw = json!({"reds": 40, "yellows": 60, "greens": 40, "cyans": 60, "blues": 20, "magentas": 80, "tint": false, "tintColor": "#e4d5b0"});
+    let cases = [
+        ("filter.blur.boxBlur", json!({"radius": 3}), "boxblur", "BoxB"),
+        ("filter.blur.surfaceBlur", json!({"radius": 5, "threshold": 15}), "surfaceBlur", "SrfB"),
+        ("layer.flattenImage", json!({}), "FltI", "Fltn"),
+        ("image.adjustments.blackWhite", bw, "blackAndWhite", "BlnW"),
+    ];
+    for (id, params, written, legacy) in &cases {
+        let exported = export_item(id, params, "S").unwrap_or_else(|| panic!("{id} does not export"));
+        assert_eq!(exported.event.id(), *written, "{id} exports under an id Photoshop runs");
+        assert_eq!(matches!(exported.event, AtnEvent::Name(_)), written.len() != 4, "{id}: a name is written as a name");
+        let d = exported.descriptor.clone();
+        // The written id, the name for Flatten Image, and the old code all import to the command.
+        let name = if *id == "layer.flattenImage" { "flattenImage" } else { written };
+        for event in [*written, name, *legacy] {
+            let e = event_for(&item(event, "", None).event).unwrap_or_else(|| panic!("{event} does not import"));
+            assert!(e.ids.contains(id), "{event} imports as {:?}, not {id}", e.ids);
+            match (e.from)(d.as_ref().unwrap()) {
+                Mapped::Steps(steps) => {
+                    assert_eq!(steps.len(), 1, "{event}: {steps:?}");
+                    assert_eq!(steps[0].0, *id, "{event}");
+                    let mut back = steps[0].1.clone();
+                    normalise(&mut back);
+                    assert_eq!(back, *params, "{event}");
+                }
+                Mapped::Unsupported { .. } => panic!("{event} does not import back"),
+            }
+        }
+    }
+
+    // A whole set of Photoshop-shaped steps (names, FltI) and old PhotoCraft-shaped ones
+    // (legacy codes) loads to the same commands.
+    let blur = |event: &str| item(event, "Box Blur", Some(desc("null").with("Rds ", px(3.0))));
+    let surface = |event: &str| item(event, "Surface Blur", Some(desc("null").with("Rds ", px(5.0)).with("Thsh", long(15.0))));
+    let photoshop = vec![blur("boxblur"), surface("surfaceBlur"), item("FltI", "Flatten Image", None), item("flattenImage", "Flatten Image", None)];
+    let legacy = vec![blur("BoxB"), surface("SrfB"), item("Fltn", "Flatten Image", None)];
+    let data = set_of("S", vec![("Photoshop", photoshop), ("Legacy", legacy)]);
+    let mut s = Session::new();
+    let r = s.execute("actions.load", json!({"data": data})).unwrap();
+    assert_eq!(r["unsupported"], json!([]), "{r}");
+    let ids = |i: usize| s.actions.list[i].steps.iter().map(|(id, _)| id.clone()).collect::<Vec<_>>();
+    assert_eq!(ids(0), ["filter.blur.boxBlur", "filter.blur.surfaceBlur", "layer.flattenImage", "layer.flattenImage"]);
+    assert_eq!(ids(1), ["filter.blur.boxBlur", "filter.blur.surfaceBlur", "layer.flattenImage"]);
+    assert_eq!(s.actions.list[1].steps[1].1, json!({"radius": 5, "threshold": 15}));
+    // Saving them writes the ids Photoshop runs, never the old codes.
+    let saved = s.execute("actions.save", json!({"set": "S"})).unwrap();
+    let file = atn::parse(&photocraft_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap()).unwrap();
+    let events: Vec<String> = file.actions.iter().flat_map(|a| a.items.iter().map(|i| i.event.id())).collect();
+    assert_eq!(events, ["boxblur", "surfaceBlur", "FltI", "FltI", "boxblur", "surfaceBlur", "FltI"]);
+
+    // Unknown ids, near misses and the legacy codes written as names stay Photoshop steps,
+    // never a panic or a wrong command.
+    for event in ["BoxBlur", "boxBlur", "BOXB", "Fltn ", "FLTI", "", "\u{0}\u{0}\u{0}\u{0}", "BlnWx"] {
+        let e = event_for(&item(event, "", None).event);
+        assert!(e.is_none(), "{event:?} maps to {:?}", e.map(|e| e.ids));
+    }
+    // A legacy code with a broken descriptor is unsupported, not a crash.
+    let e = event_for(&item("SrfB", "", None).event).unwrap();
+    assert!(matches!((e.from)(&desc("null").with("Rds ", D::Double(f64::NAN))), Mapped::Unsupported { .. } | Mapped::Steps(_)));
+    // A wrong-typed key is skipped like any other unreadable field: the step keeps the defaults.
+    match (e.from)(&desc("null").with("Rds ", text("x"))) {
+        Mapped::Steps(steps) => assert!(steps.iter().all(|(_, p)| p.get("radius").is_none()), "{steps:?}"),
+        Mapped::Unsupported { .. } => {}
+    }
+}
+
 /// Smart Blur's quality uses Photoshop's `SmBQ` codes (`SBQL`/`SBQM`/`SBQH`): measured in
 /// Photoshop, the old `Hgh `/`Mdm `/`Low ` play back as its fallback quality. Old codes still read.
 #[test]
@@ -1199,6 +1303,25 @@ fn fractional_translation_only_transform_keeps_offset_and_interpolation() {
     assert_eq!(steps[0].1.get("interpolation"), Some(&json!("bilinear")));
 }
 
+/// Arbitrary canvas rotation must keep its interpolation through a strict export: dropping it
+/// silently replays the rotation with the default bicubic resampling.
+#[test]
+fn arbitrary_rotation_keeps_interpolation_through_atn() {
+    for params in [
+        json!({"angle": 17, "direction": "ccw", "interpolation": "nearest"}),
+        json!({"angle": 17, "direction": "ccw", "interpolation": "bilinear"}),
+        json!({"angle": 17, "direction": "ccw", "interpolation": "bicubic"}),
+        json!({"angle": 17, "direction": "ccw"}),
+    ] {
+        let a = Action { name: "Rot".into(), steps: vec![("image.rotation.arbitrary".into(), params.clone())], ..Default::default() };
+        let (bytes, skipped) = export("Rot", &[&a], &[], false).unwrap();
+        assert!(skipped.is_empty());
+        let imported = import(&bytes).unwrap();
+        assert!(imported.unsupported.is_empty());
+        assert_eq!(imported.actions[0].steps, vec![("image.rotation.arbitrary".to_string(), params)]);
+    }
+}
+
 /// A filter recorded against a layer mask must not export as a plain filter that edits the
 /// layer's pixels on replay: Photoshop's descriptor has no field for PhotoCraft's `target`.
 #[test]
@@ -1217,6 +1340,23 @@ fn add_noise_with_mask_target_is_not_exported_as_pixel_filter() {
         assert!(skipped.is_empty());
         let imported = import(&bytes).unwrap();
         assert_eq!(imported.actions[0].steps, vec![("filter.noise.addNoise".to_string(), json!({"amount": 75, "seed": 123}))]);
+    }
+}
+
+/// A Play Action that starts the called action at a later step must not export as a call of the
+/// whole action: that would replay the steps the recording deliberately skipped.
+#[test]
+fn partial_play_action_is_not_exported_as_whole_action_call() {
+    let partial = Action { name: "Parent".into(), steps: vec![("actions.play".into(), json!({"action": "Child", "from": 1}))], ..Default::default() };
+    assert!(export("Set", &[&partial], &[], false).is_err());
+    let (_, skipped) = export("Set", &[&partial], &[], true).unwrap();
+    assert_eq!(skipped, vec![Skipped { action: "Parent".into(), step: 0, id: "actions.play".into() }]);
+    for params in [json!({"action": "Child"}), json!({"action": "Child", "from": 0})] {
+        let whole = Action { name: "Parent".into(), steps: vec![("actions.play".into(), params)], ..Default::default() };
+        let (bytes, skipped) = export("Set", &[&whole], &[], false).unwrap();
+        assert!(skipped.is_empty());
+        let imported = import(&bytes).unwrap();
+        assert_eq!(imported.actions[0].steps, vec![("actions.play".to_string(), json!({"action": "Child"}))]);
     }
 }
 

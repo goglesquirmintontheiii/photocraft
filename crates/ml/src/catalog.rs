@@ -96,10 +96,44 @@ pub fn identify(files: &[(String, u64)], link: Option<&str>) -> Option<&'static 
 
 pub static RECOMMENDED: &[CatalogModel] = &[
     CatalogModel {
+        id: "sam-2-1-large",
+        name: "SAM 2.1 Large",
+        kinds: &[ModelKind::Segmentation],
+        description: "Meta's Segment Anything 2.1 at its largest: the most accurate selections, slower",
+        license: "Apache-2.0",
+        homepage: "https://huggingface.co/onnx-community/sam2.1-hiera-large-ONNX",
+        files: &[
+            CatalogFile {
+                url: "https://huggingface.co/onnx-community/sam2.1-hiera-large-ONNX/resolve/main/onnx/vision_encoder.onnx",
+                name: "vision_encoder.onnx",
+                size: 1_350_487,
+                sha256: "ad3a8161c6bd6d8beea811300c60e20d626035feaa3c19622ace27b22e25bec8",
+            },
+            CatalogFile {
+                url: "https://huggingface.co/onnx-community/sam2.1-hiera-large-ONNX/resolve/main/onnx/vision_encoder.onnx_data",
+                name: "vision_encoder.onnx_data",
+                size: 888_587_456,
+                sha256: "88c501a65b6aaeac99b65a275f3f559727404283930d107d499fda8714ba7e5a",
+            },
+            CatalogFile {
+                url: "https://huggingface.co/onnx-community/sam2.1-hiera-large-ONNX/resolve/main/onnx/prompt_encoder_mask_decoder.onnx",
+                name: "prompt_encoder_mask_decoder.onnx",
+                size: 213_114,
+                sha256: "a21b3b09f6e5f5838d630d92a150914ca58f8f58b603b8f53fc32b03da982203",
+            },
+            CatalogFile {
+                url: "https://huggingface.co/onnx-community/sam2.1-hiera-large-ONNX/resolve/main/onnx/prompt_encoder_mask_decoder.onnx_data",
+                name: "prompt_encoder_mask_decoder.onnx_data",
+                size: 20_958_208,
+                sha256: "bfdcd4f7ee04298a82fe1aaf1bd7b8edf544d36901e1a886f01892fb915bd63c",
+            },
+        ],
+    },
+    CatalogModel {
         id: "sam-2-1-base-plus",
         name: "SAM 2.1 Base+",
         kinds: &[ModelKind::Segmentation],
-        description: "Meta's Segment Anything 2.1, the most accurate selections",
+        description: "Meta's Segment Anything 2.1: accurate selections at a moderate size",
         license: "Apache-2.0",
         homepage: "https://huggingface.co/onnx-community/sam2.1-hiera-base-plus-ONNX",
         files: &[
@@ -220,6 +254,70 @@ pub static RECOMMENDED: &[CatalogModel] = &[
         ],
     },
     CatalogModel {
+        id: "birefnet-hr-matting",
+        name: "BiRefNet HR Matting (2K)",
+        kinds: &[ModelKind::Matting],
+        description: "Best-quality soft cut-outs (hair, fur, glass) at 2048 px; needs a lot of memory",
+        license: "MIT",
+        homepage: "https://huggingface.co/PinkPixel/birefnet-hr-matting-onnx",
+        files: &[
+            CatalogFile {
+                url: "https://huggingface.co/PinkPixel/birefnet-hr-matting-onnx/resolve/main/model.onnx",
+                name: "model.onnx",
+                size: 932_150_975,
+                sha256: "a548a1f3307250766bef50b174026b3cfa39a695bc1e42ec131c14fe82797ffd",
+            },
+        ],
+    },
+    CatalogModel {
+        id: "birefnet-matting",
+        name: "BiRefNet Matting",
+        kinds: &[ModelKind::Matting],
+        description: "Soft-edge cut-outs with fine hair detail at 1024 px",
+        license: "MIT",
+        homepage: "https://huggingface.co/emrikol/birefnet-matting-onnx",
+        files: &[
+            CatalogFile {
+                url: "https://huggingface.co/emrikol/birefnet-matting-onnx/resolve/main/birefnet-matting.onnx",
+                name: "birefnet-matting.onnx",
+                size: 940_840_787,
+                sha256: "f0843e38f6a4e88efc8c5fad4178ad7ed6c818346ce12f82e7b579324fe7e0c5",
+            },
+        ],
+    },
+    CatalogModel {
+        id: "birefnet-dynamic",
+        name: "BiRefNet Dynamic",
+        kinds: &[ModelKind::Matting, ModelKind::Segmentation],
+        description: "High-accuracy subject selection trained to work at many resolutions",
+        license: "MIT",
+        homepage: "https://huggingface.co/onnx-community/BiRefNet_dynamic-1024x1024-ONNX",
+        files: &[
+            CatalogFile {
+                url: "https://huggingface.co/onnx-community/BiRefNet_dynamic-1024x1024-ONNX/resolve/main/onnx/model.onnx",
+                name: "model.onnx",
+                size: 972_495_971,
+                sha256: "aa3c17882a27f079fafa7655cf50e83b9e6e067d6c6fa4cbc3524ae441da0bd7",
+            },
+        ],
+    },
+    CatalogModel {
+        id: "birefnet-hrsod",
+        name: "BiRefNet HRSOD",
+        kinds: &[ModelKind::Matting, ModelKind::Segmentation],
+        description: "Subject selection tuned on high-resolution photos",
+        license: "MIT",
+        homepage: "https://huggingface.co/onnx-community/BiRefNet-HRSOD_DHU-ONNX",
+        files: &[
+            CatalogFile {
+                url: "https://huggingface.co/onnx-community/BiRefNet-HRSOD_DHU-ONNX/resolve/main/onnx/model.onnx",
+                name: "model.onnx",
+                size: 972_666_916,
+                sha256: "4f5837663194fb88f603b76782eae05a3c29f5749872ca1bfb636bd26e7f6bfc",
+            },
+        ],
+    },
+    CatalogModel {
         id: "birefnet",
         name: "BiRefNet",
         kinds: &[ModelKind::Matting, ModelKind::Segmentation],
@@ -316,6 +414,38 @@ pub static RECOMMENDED: &[CatalogModel] = &[
             size: 89_200_000,
             sha256: "99b197b7579f2022a38d8570ed94d972037304e5e689c51ba774e03f1f884b48",
         }],
+    },
+    CatalogModel {
+        id: "realistic-vision-6-inpainting",
+        name: "Realistic Vision 6.0 Inpainting",
+        kinds: &[ModelKind::Inpainting],
+        description: "The most photorealistic prompted fills, full precision (Stable Diffusion 1.5 checkpoint, prepared on first use)",
+        license: "CreativeML OpenRAIL-M",
+        homepage: "https://huggingface.co/SG161222/Realistic_Vision_V6.0_B1_noVAE",
+        files: &[
+            CatalogFile {
+                url: "https://huggingface.co/SG161222/Realistic_Vision_V6.0_B1_noVAE/resolve/main/Realistic_Vision_V6.0_NV_B1_inpainting.safetensors",
+                name: "Realistic_Vision_V6.0_NV_B1_inpainting.safetensors",
+                size: 4_265_203_868,
+                sha256: "e9c575dbbe237ea889e14c41f953fc9fb311439a88b15bb2e789b0630ae45efe",
+            },
+        ],
+    },
+    CatalogModel {
+        id: "realistic-vision-6-inpainting-fp16",
+        name: "Realistic Vision 6.0 Inpainting (half size)",
+        kinds: &[ModelKind::Inpainting],
+        description: "Photorealistic prompted fills at half the download (Stable Diffusion 1.5 checkpoint, prepared on first use)",
+        license: "CreativeML OpenRAIL-M",
+        homepage: "https://huggingface.co/SG161222/Realistic_Vision_V6.0_B1_noVAE",
+        files: &[
+            CatalogFile {
+                url: "https://huggingface.co/SG161222/Realistic_Vision_V6.0_B1_noVAE/resolve/main/Realistic_Vision_V6.0_NV_B1_inpainting_fp16.safetensors",
+                name: "Realistic_Vision_V6.0_NV_B1_inpainting_fp16.safetensors",
+                size: 2_136_906_350,
+                sha256: "d939cbdbce19a9d8837794acd06ef8db1ad4a2f2bcf1418432d897eac98f1afd",
+            },
+        ],
     },
     CatalogModel {
         id: "realistic-vision-5-1-inpainting",
@@ -524,6 +654,22 @@ pub static RECOMMENDED: &[CatalogModel] = &[
                 name: "vae_encoder/model.onnx",
                 size: 68_430_178,
                 sha256: "f0da9070d007def0d6a4e7c10a21462bb6172e460ef2587c3fe91191397b4cea",
+            },
+        ],
+    },
+    CatalogModel {
+        id: "sd-2-inpainting-full",
+        name: "Stable Diffusion 2 Inpainting (full precision)",
+        kinds: &[ModelKind::Inpainting],
+        description: "The official SD 2 inpainting checkpoint at full precision, prepared on first use",
+        license: "CreativeML OpenRAIL++-M",
+        homepage: "https://huggingface.co/sd2-community/stable-diffusion-2-inpainting",
+        files: &[
+            CatalogFile {
+                url: "https://huggingface.co/sd2-community/stable-diffusion-2-inpainting/resolve/main/512-inpainting-ema.safetensors",
+                name: "512-inpainting-ema.safetensors",
+                size: 5_214_662_094,
+                sha256: "b29e2ed9a8fe58e76f7e801bda091d23738bd74c1da3f339bcbe2d40922fcb60",
             },
         ],
     },
@@ -740,6 +886,118 @@ pub static RECOMMENDED: &[CatalogModel] = &[
                 name: "vae_encoder/model.onnx",
                 size: 136_773_617,
                 sha256: "8912a7e136a1c3ea21699d170a0e98e89608f8eb8213ba27f7e1a2709aebc517",
+            },
+        ],
+    },
+    CatalogModel {
+        id: "swin2sr-realworld-4x",
+        name: "Swin2SR Real-World 4x",
+        kinds: &[ModelKind::Enhance],
+        description: "Transformer upscaler for real photos: clean, faithful detail; the slowest",
+        license: "Apache-2.0",
+        homepage: "https://huggingface.co/Xenova/swin2SR-realworld-sr-x4-64-bsrgan-psnr",
+        files: &[
+            CatalogFile {
+                url: "https://huggingface.co/Xenova/swin2SR-realworld-sr-x4-64-bsrgan-psnr/resolve/main/onnx/model.onnx",
+                name: "model.onnx",
+                size: 52_772_645,
+                sha256: "f496dc73dcc01d778b1a12eb4c4038d6b27cd1c0b5bcd4258455ed6d7816c835",
+            },
+        ],
+    },
+    CatalogModel {
+        id: "nomos2-realplksr-4x",
+        name: "4x Nomos2 RealPLKSR",
+        kinds: &[ModelKind::Enhance],
+        description: "Sharp 4x upscaler for photos that copes with JPEG artifacts and keeps background blur",
+        license: "CC-BY-4.0",
+        homepage: "https://huggingface.co/Phips/4xNomos2_realplksr_dysample",
+        files: &[
+            CatalogFile {
+                url: "https://huggingface.co/nesaorg/4xNomos2_realplksr_dysample_256_fp32_fullyoptimized/resolve/main/4xNomos2_realplksr_dysample_256_fp32_fullyoptimized.onnx",
+                name: "4xNomos2_realplksr_dysample_256_fp32_fullyoptimized.onnx",
+                size: 30_298_952,
+                sha256: "f4da353c0a380aa2c53485f2479bfd7959cab071734075d96f53df3233976716",
+            },
+        ],
+    },
+    CatalogModel {
+        id: "realplksr-4x",
+        name: "RealPLKSR 4x",
+        kinds: &[ModelKind::Enhance],
+        description: "Fast, natural-looking 4x upscaler for photographs (from darktable)",
+        license: "MIT",
+        homepage: "https://huggingface.co/darktable-org/upscale-realplksr-onnx",
+        files: &[
+            CatalogFile {
+                url: "https://huggingface.co/darktable-org/upscale-realplksr-onnx/resolve/main/onnx/model_x4.onnx",
+                name: "model_x4.onnx",
+                size: 29_711_010,
+                sha256: "8ce692652494e2e5c31e1f7c7ab61eb084e9a450cde727a374f5d6746cfe054b",
+            },
+        ],
+    },
+    CatalogModel {
+        id: "realplksr-2x",
+        name: "RealPLKSR 2x",
+        kinds: &[ModelKind::Enhance],
+        description: "Fast, natural-looking 2x upscaler for lightly soft photos",
+        license: "MIT",
+        homepage: "https://huggingface.co/darktable-org/upscale-realplksr-onnx",
+        files: &[
+            CatalogFile {
+                url: "https://huggingface.co/darktable-org/upscale-realplksr-onnx/resolve/main/onnx/model_x2.onnx",
+                name: "model_x2.onnx",
+                size: 29_627_920,
+                sha256: "d7abb65092f3808d3aa255ffdab42b1d672883915d90adbdd321204168b9f293",
+            },
+        ],
+    },
+    CatalogModel {
+        id: "swin2sr-classical-2x",
+        name: "Swin2SR Classical 2x",
+        kinds: &[ModelKind::Enhance],
+        description: "Transformer 2x upscaler for clean, lightly compressed images",
+        license: "Apache-2.0",
+        homepage: "https://huggingface.co/Xenova/swin2SR-classical-sr-x2-64",
+        files: &[
+            CatalogFile {
+                url: "https://huggingface.co/Xenova/swin2SR-classical-sr-x2-64/resolve/main/onnx/model.onnx",
+                name: "model.onnx",
+                size: 54_428_699,
+                sha256: "6dde3fe2440543ccae7c40d175609f83c18aeaa3d8456745c4329ef97ae744bd",
+            },
+        ],
+    },
+    CatalogModel {
+        id: "real-esrgan-x4plus",
+        name: "Real-ESRGAN x4plus",
+        kinds: &[ModelKind::Enhance],
+        description: "The classic Real-ESRGAN 4x upscaler for general photos; sharp, sometimes smooth",
+        license: "BSD-3-Clause",
+        homepage: "https://huggingface.co/bukuroo/RealESRGAN-ONNX",
+        files: &[
+            CatalogFile {
+                url: "https://huggingface.co/bukuroo/RealESRGAN-ONNX/resolve/main/real-esrgan-x4plus-128.onnx",
+                name: "real-esrgan-x4plus-128.onnx",
+                size: 67_160_311,
+                sha256: "6a6f4a3d58553d40fdd443d9e5f4b2deb9b52bef1ec2947700fc2167ac876c7d",
+            },
+        ],
+    },
+    CatalogModel {
+        id: "real-esrgan-general-v3",
+        name: "Real-ESRGAN General v3",
+        kinds: &[ModelKind::Enhance],
+        description: "Tiny, very fast 4x upscaler for everyday photos",
+        license: "BSD-3-Clause",
+        homepage: "https://huggingface.co/Heliosoph/realesrgan-onnx",
+        files: &[
+            CatalogFile {
+                url: "https://huggingface.co/Heliosoph/realesrgan-onnx/resolve/main/realesr-general-x4v3.onnx",
+                name: "realesr-general-x4v3.onnx",
+                size: 4_871_181,
+                sha256: "09b757accd747d7e423c1d352b3e8f23e77cc5742d04bae958d4eb8082b76fa4",
             },
         ],
     },

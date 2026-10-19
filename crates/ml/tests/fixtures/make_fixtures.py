@@ -127,3 +127,10 @@ json.dump({"pad_token": "<|endoftext|>"}, open("tiny_sd/tokenizer/tokenizer_conf
 json.dump({"_class_name": "DDIMScheduler", "beta_schedule": "scaled_linear", "beta_start": 0.00085, "beta_end": 0.012,
            "num_train_timesteps": 1000, "steps_offset": 1, "prediction_type": "epsilon", "set_alpha_to_one": False}, open("tiny_sd/scheduler/scheduler_config.json", "w"))
 json.dump({"_class_name": "OnnxStableDiffusionInpaintPipeline"}, open("tiny_sd/model_index.json", "w"))
+
+# A ×2 super-resolution-like network: nearest-neighbour upscaling (for Generative Enhance).
+x = helper.make_tensor_value_info("input", TensorProto.FLOAT, [1, 3, "h", "w"])
+y = helper.make_tensor_value_info("output", TensorProto.FLOAT, [1, 3, "h2", "w2"])
+scales = helper.make_tensor("scales", TensorProto.FLOAT, [4], [1.0, 1.0, 2.0, 2.0])
+nodes = [helper.make_node("Resize", ["input", "", "scales"], ["output"], mode="nearest")]
+save(helper.make_graph(nodes, "sr_x2_like", [x], [y], [scales]), "sr_x2_like.onnx")

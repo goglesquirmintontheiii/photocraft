@@ -1376,6 +1376,28 @@ pub fn specs() -> Vec<CommandSpec> {
             journal: true,
         },
         CommandSpec {
+            id: "edit.generativeSharpen",
+            label: "Generative Sharpen",
+            menu: &[],
+            shortcut: None,
+            params: r#"{"seed":0..4294967295?=new each time,"detail":0..1=0.5 (how strongly it's redrawn),"model":id?=best enabled Generative Enhance model (see ai.models),"preview":bool=false (as edit.generativeFill)} → {"layer","seed","damage"} or, previewing, {"variation","seed","layer","count"} (a background job: a local model redraws the selection sharper and more detailed, on a new layer; seeds matter with Stable Diffusion models, not super-resolution ones)"#,
+            enabled: generative_fill::enabled,
+            run: generative_fill::generative_sharpen,
+            journal: true,
+        },
+        CommandSpec {
+            id: "paint.generativeEnhance",
+            label: "Generative Enhance",
+            menu: &[],
+            shortcut: None,
+            params: brush_params!(
+                r#","strokes":[[[x,y,pressure?],…],…]?,"seed":0..4294967295?=new each time,"detail":0..1=0.5,"model":id?=best enabled Generative Enhance model (see ai.models),"closeLoops":bool=true,"sampleAllLayers":bool=false,"newLayer":bool=false → {"damage","layer"?,"seed"} (a background job: a local model redraws what the strokes cover sharper and more detailed)"#
+            ),
+            enabled: generative::enhance_enabled,
+            run: generative::generative_enhance,
+            journal: true,
+        },
+        CommandSpec {
             id: "edit.generativeFill.show",
             label: "Show Generative Fill Variation",
             menu: &[],

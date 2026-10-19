@@ -144,10 +144,14 @@ what an agent can't finish alone.
   MI-GAN, or an image-to-image model such as a DINOv3 reflection remover). Prompted fills
   (Infill brush, Edit › Generative Fill with a variations list) run Stable Diffusion 1.5/2
   inpainting pipelines exported to ONNX (CLIP tokenizer, DDIM, classifier-free guidance);
-  ordinary 4-channel pipelines inpaint by keeping the unmasked latents. Default builds have no
-  runtime; the tools say so.
-- **Missing:** SDXL and single-file checkpoint (.safetensors) pipelines, Generative Expand,
-  Generative Upscale, Neural
+  ordinary 4-channel pipelines inpaint by keeping the unmasked latents. Single-file Stable
+  Diffusion 1.x/2.x/XL checkpoints (.safetensors) are converted to ONNX on import or first use
+  (`photocraft_ml::convert`, checked against diffusers on tiny models). The Generative Enhance
+  brush and Edit › Generative Sharpen (variations, seed, no prompt) run a super-resolution
+  network in tiles or a light img2img diffusion pass; the Object Selection Brush selects the
+  object painted over (SAM). Models run on the GPU, an NPU (DirectML, Windows) or the CPU,
+  falling back in that order. Default builds have no runtime; the tools say so.
+- **Missing:** Generative Expand, Generative Upscale as a resize, Neural
   Filters, Sky Replacement, Super Zoom, ML Select Subject/Sky. Classical substitutes exist
   (GrabCut/max-flow selection, Remove tool by non-local patch completion).
 - **Evidence:** Photoshop's `Required/UXP` ships the Neural Filters gallery and its `.kys` has

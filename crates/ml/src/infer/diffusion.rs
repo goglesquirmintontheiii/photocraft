@@ -30,11 +30,14 @@ pub struct Prompting {
     pub steps: usize,
     /// Classifier-free guidance: how closely to follow the prompt (1 = ignore it).
     pub guidance: f32,
+    /// How much to change (0–1): 1 makes the hole anew; less starts from the picture there,
+    /// noised that far, and keeps its shapes (detail and sharpness passes).
+    pub strength: f32,
 }
 
 impl Default for Prompting {
     fn default() -> Self {
-        Prompting { prompt: String::new(), negative: String::new(), seed: None, steps: DEFAULT_STEPS, guidance: 7.5 }
+        Prompting { prompt: String::new(), negative: String::new(), seed: None, steps: DEFAULT_STEPS, guidance: 7.5, strength: 1.0 }
     }
 }
 
@@ -63,6 +66,9 @@ struct Parts {
     tokenizer_config: Vec<PathBuf>,
     scheduler: Option<PathBuf>,
     vae_config: Option<PathBuf>,
+    /// SDXL's second text encoder and its tokenizer settings.
+    text_encoder_2: Option<PathBuf>,
+    tokenizer_2_config: Vec<PathBuf>,
 }
 
 fn parent_name(p: &Path) -> String {
@@ -79,16 +85,19 @@ fn parts(model: &Model) -> Option<Parts> {
     };
     let named = |name: &str| model.files.iter().find(|p| file_name(p) == name).cloned();
     let in_dir = |dir: &str, name: &str| model.files.iter().find(|p| file_name(p) == name && parent_name(p) == dir).cloned();
+    let tok = |name: &str| in_dir("tokenizer", name).or_else(|| named(name));
     Some(Parts {
         text_encoder: onnx("text_encoder")?,
         unet: onnx("unet")?,
         vae_encoder: onnx("vae_encoder"),
         vae_decoder: onnx("vae_decoder")?,
-        vocab: named("vocab.json")?,
-        merges: named("merges.txt")?,
-        tokenizer_config: ["tokenizer_config.json", "special_tokens_map.json"].iter().filter_map(|n| named(n)).collect(),
+        vocab: tok("vocab.json")?,
+        merges: tok("merges.txt")?,
+        tokenizer_config: ["tokenizer_config.json", "special_tokens_map.json"].iter().filter_map(|n| tok(n)).collect(),
         scheduler: named("scheduler_config.json"),
         vae_config: in_dir("vae_decoder", "config.json"),
+        text_encoder_2: onnx("text_encoder_2"),
+        tokenizer_2_config: ["tokenizer_config.json", "special_tokens_map.json"].iter().filter_map(|n| in_dir("tokenizer_2", n)).collect(),
     })
 }
 
@@ -248,12 +257,53 @@ struct Embedded {
     texts: (String, String),
     cond: Tensor,
     uncond: Tensor,
+    /// SDXL's pooled text (prompt, negative).
+    pooled: Option<(Tensor, Tensor)>,
 }
 
 static EMBEDDED: Mutex<Option<Embedded>> = Mutex::new(None);
 
 fn find_port<'a>(ports: &'a [Port], names: &[&str], dims: usize) -> Option<&'a Port> {
     names.iter().find_map(|n| ports.iter().find(|p| p.name == *n)).or_else(|| ports.iter().find(|p| p.shape.len() == dims))
+}
+
+/// The prompt's embedding and, from an encoder that gives one (SDXL's second), its pooled one.
+fn embed_pooled(text_encoder: &Arc<dyn Network>, tokenizer: &ClipTokenizer, text: &str) -> Result<(Tensor, Option<Tensor>)> {
+    let ins = text_encoder.inputs();
+    let input = ins
+        .iter()
+        .find(|p| p.name == "input_ids")
+        .or_else(|| ins.iter().find(|p| matches!(p.elem, Elem::I32 | Elem::I64)))
+        .or(ins.first())
+        .ok_or_else(|| Error::Invalid("The text encoder has no inputs.".into()))?;
+    let ids = tokenizer.encode(text);
+    let out = text_encoder.run(vec![(input.name.clone(), Tensor::i64(&[1, LENGTH as i64], ids))])?;
+    let t = out
+        .iter()
+        .find(|(n, _)| n == "hidden_states" || n == "last_hidden_state")
+        .or_else(|| out.iter().find(|(_, t)| t.shape.len() == 3))
+        .map(|(_, t)| Tensor::f32(&t.shape, t.to_f32()))
+        .ok_or_else(|| Error::Invalid("The text encoder gave no text embeddings.".into()))?;
+    let pooled = out.iter().find(|(n, t)| n == "text_embeds" || t.shape.len() == 2).map(|(_, t)| Tensor::f32(&t.shape, t.to_f32()));
+    Ok((t, pooled))
+}
+
+/// SDXL's two encoders' states side by side (per token), and the second one's pooled text.
+fn embed_xl(enc: (&Arc<dyn Network>, &ClipTokenizer), enc2: (&Arc<dyn Network>, &ClipTokenizer), text: &str) -> Result<(Tensor, Tensor)> {
+    let (a, _) = embed_pooled(enc.0, enc.1, text)?;
+    let (b, pooled) = embed_pooled(enc2.0, enc2.1, text)?;
+    let pooled = pooled.ok_or_else(|| Error::Invalid("SDXL's second text encoder gave no pooled text.".into()))?;
+    let (da, db) = (a.shape.get(2).copied().unwrap_or(0).max(0) as usize, b.shape.get(2).copied().unwrap_or(0).max(0) as usize);
+    let (va, vb) = (a.to_f32(), b.to_f32());
+    let mut v = Vec::with_capacity(LENGTH * (da + db));
+    for i in 0..LENGTH {
+        v.extend_from_slice(va.get(i * da..(i + 1) * da).unwrap_or(&[]));
+        v.extend_from_slice(vb.get(i * db..(i + 1) * db).unwrap_or(&[]));
+    }
+    if v.len() != LENGTH * (da + db) {
+        return Err(Error::Invalid("The text encoders' results have odd sizes.".into()));
+    }
+    Ok((Tensor::f32(&[1, LENGTH as i64, (da + db) as i64], v), pooled))
 }
 
 fn embed(text_encoder: &Arc<dyn Network>, tokenizer: &ClipTokenizer, text: &str) -> Result<Tensor> {
@@ -277,13 +327,13 @@ fn embed(text_encoder: &Arc<dyn Network>, tokenizer: &ClipTokenizer, text: &str)
 
 /// The size the model works at: about 512 × 512 in area, multiples of 64, 256–768 a side (or the
 /// UNet's own size when it is fixed).
-fn work_size(w: usize, h: usize, sample: &Port) -> (usize, usize) {
+fn work_size(w: usize, h: usize, sample: &Port, native: usize) -> (usize, usize) {
     let fixed = |i: usize| sample.shape.get(i).copied().filter(|v| *v > 0).map(|v| v as usize * 8);
     if let (Some(fw), Some(fh)) = (fixed(3), fixed(2)) {
         return (fw, fh);
     }
-    let s = (512.0 * 512.0 / (w.max(1) * h.max(1)) as f64).sqrt();
-    let side = |v: usize| (((v as f64 * s) / 64.0).round() as usize * 64).clamp(256, 768);
+    let s = ((native * native) as f64 / (w.max(1) * h.max(1)) as f64).sqrt();
+    let side = |v: usize| (((v as f64 * s) / 64.0).round() as usize * 64).clamp(native / 2, native * 3 / 2);
     (side(w), side(h))
 }
 
@@ -336,12 +386,15 @@ pub fn diffuse_with(loader: &dyn Loader, model: &Model, img: &Image, hole: &[f32
         .or_else(|| u_in.iter().find(|p| p.name != sample.name && p.name != hidden.name))
         .ok_or_else(|| Error::Unsupported("The UNet has no timestep input.".into()))?
         .clone();
-    if u_in.len() > 3 {
-        return Err(Error::Unsupported(format!(
-            "{}'s UNet takes extra inputs ({}): Stable Diffusion XL and other pipelines like it aren't supported yet. Use a Stable Diffusion 1.5 or 2 pipeline.",
-            model.name,
-            u_in.iter().map(|p| p.name.as_str()).filter(|n| ![sample.name.as_str(), hidden.name.as_str(), timestep.name.as_str()].contains(n)).collect::<Vec<_>>().join(", ")
-        )));
+    // SDXL: the pooled text and the picture's size come in too.
+    let xl = u_in.iter().any(|p| p.name == "text_embeds") && u_in.iter().any(|p| p.name == "time_ids");
+    let known = [sample.name.as_str(), hidden.name.as_str(), timestep.name.as_str(), "text_embeds", "time_ids"];
+    let extra: Vec<&str> = u_in.iter().map(|p| p.name.as_str()).filter(|n| !known.contains(n)).collect();
+    if !extra.is_empty() {
+        return Err(Error::Unsupported(format!("{}'s UNet takes inputs PhotoCraft doesn't know ({}).", model.name, extra.join(", "))));
+    }
+    if xl && parts.text_encoder_2.is_none() {
+        return Err(Error::Unsupported(format!("{} is an SDXL pipeline without its second text encoder (text_encoder_2).", model.name)));
     }
     let channels = sample.shape.get(1).copied().filter(|c| *c > 0).unwrap_or(9);
     let inpainting_unet = match channels {
@@ -357,22 +410,35 @@ pub fn diffuse_with(loader: &dyn Loader, model: &Model, img: &Image, hole: &[f32
     let texts = (opts.prompt.trim().to_string(), opts.negative.trim().to_string());
     let cached = {
         let e = EMBEDDED.lock().unwrap_or_else(PoisonError::into_inner);
-        e.as_ref().filter(|e| e.encoder == parts.text_encoder && e.texts == texts).map(|e| (e.cond.clone(), e.uncond.clone()))
+        e.as_ref().filter(|e| e.encoder == parts.text_encoder && e.texts == texts).map(|e| (e.cond.clone(), e.uncond.clone(), e.pooled.clone()))
     };
-    let (cond, uncond) = match cached {
+    let (cond, uncond, pooled) = match cached {
         Some(c) => c,
         None => {
             let te = load(loader, &parts.text_encoder)?;
-            let cond = embed(&te, &tokenizer, &texts.0)?;
-            let uncond = embed(&te, &tokenizer, &texts.1)?;
+            let (cond, uncond, pooled) = match &parts.text_encoder_2 {
+                Some(te2_path) if xl => {
+                    let te2 = load(loader, te2_path)?;
+                    let tok2 = ClipTokenizer::load(&parts.vocab, &parts.merges, &parts.tokenizer_2_config.iter().map(PathBuf::as_path).collect::<Vec<_>>())?;
+                    let (c, cp) = embed_xl((&te, &tokenizer), (&te2, &tok2), &texts.0)?;
+                    // SDXL's empty negative prompt is all zeros.
+                    let (u, up) = if texts.1.is_empty() {
+                        (Tensor::f32(&c.shape, vec![0.0; c.len()]), Tensor::f32(&cp.shape, vec![0.0; cp.len()]))
+                    } else {
+                        embed_xl((&te, &tokenizer), (&te2, &tok2), &texts.1)?
+                    };
+                    (c, u, Some((cp, up)))
+                }
+                _ => (embed(&te, &tokenizer, &texts.0)?, embed(&te, &tokenizer, &texts.1)?, None),
+            };
             *EMBEDDED.lock().unwrap_or_else(PoisonError::into_inner) =
-                Some(Embedded { encoder: parts.text_encoder.clone(), texts: texts.clone(), cond: cond.clone(), uncond: uncond.clone() });
-            (cond, uncond)
+                Some(Embedded { encoder: parts.text_encoder.clone(), texts: texts.clone(), cond: cond.clone(), uncond: uncond.clone(), pooled: pooled.clone() });
+            (cond, uncond, pooled)
         }
     };
 
     // Image and mask at the working size.
-    let (ww, wh) = work_size(w, h, &sample);
+    let (ww, wh) = work_size(w, h, &sample, if xl { 1024 } else { 512 });
     let (lw, lh) = (ww / 8, wh / 8);
     let rgb = resize(&img.rgb, w, h, 3, ww, wh);
     let mask: Vec<f32> = resize(hole, w, h, 1, ww, wh).into_iter().map(|v| if v > 0.25 { 1.0 } else { 0.0 }).collect();
@@ -396,9 +462,12 @@ pub fn diffuse_with(loader: &dyn Loader, model: &Model, img: &Image, hole: &[f32
     };
     let signed = to_signed(&rgb, ww, wh);
     let n = ww * wh;
+    let strength = if opts.strength.is_finite() { opts.strength.clamp(0.0, 1.0) } else { 1.0 };
+    let partial = strength < 0.999;
     let (image_latents, masked_latents) = if inpainting_unet {
         let masked: Vec<f32> = signed.iter().enumerate().map(|(i, v)| if mask.get(i % n).copied().unwrap_or(0.0) >= 0.5 { 0.0 } else { *v }).collect();
-        (Vec::new(), encode(masked)?)
+        let whole = if partial { encode(signed.clone())? } else { Vec::new() };
+        (whole, encode(masked)?)
     } else {
         (encode(signed)?, Vec::new())
     };
@@ -414,7 +483,14 @@ pub fn diffuse_with(loader: &dyn Loader, model: &Model, img: &Image, hole: &[f32
     let mut rng = Rng(seed);
     let ln = lw * lh * 4;
     let noise = rng.normals(ln);
-    let mut latents = noise.clone();
+    // The steps run: all of them, or (at a lower strength) the last `strength` of them, from the
+    // picture noised to the first one's level.
+    let mut timesteps = schedule.timesteps.clone();
+    if partial {
+        let keep = ((timesteps.len() as f32 * strength).round() as usize).clamp(1, timesteps.len());
+        timesteps.drain(..timesteps.len() - keep);
+    }
+    let mut latents = if partial { schedule.noised(&image_latents, &noise, timesteps.first().copied()) } else { noise.clone() };
     let lplane = lw * lh;
     let t_shape: Vec<i64> = match timestep.shape.first() {
         None => Vec::new(),
@@ -422,8 +498,8 @@ pub fn diffuse_with(loader: &dyn Loader, model: &Model, img: &Image, hole: &[f32
         Some(_) => vec![1],
     };
     let t_count = t_shape.first().copied().unwrap_or(1).max(1) as usize;
-    let total = schedule.timesteps.len();
-    for (k, &t) in schedule.timesteps.iter().enumerate() {
+    let total = timesteps.len();
+    for (k, &t) in timesteps.iter().enumerate() {
         step(report, 0.1 + 0.85 * k as f32 / total as f32, &format!("Generating… step {} of {total}", k + 1))?;
         // The UNet's input: latents, then for inpainting UNets the mask and the masked image.
         let mut x = latents.clone();
@@ -433,18 +509,30 @@ pub fn diffuse_with(loader: &dyn Loader, model: &Model, img: &Image, hole: &[f32
         }
         let ts = Tensor::f32(&t_shape, vec![t as f32; t_count]);
         let shape1 = [1, channels, lh as i64, lw as i64];
-        let run = |xs: Vec<f32>, emb: Vec<f32>, b: i64| -> Result<Vec<f32>> {
+        // `uncond`: which halves of the batch are the negative prompt's (for SDXL's pooled text).
+        let run = |xs: Vec<f32>, emb: Vec<f32>, b: i64, uncond: &[bool]| -> Result<Vec<f32>> {
             let mut s = shape1;
             s[0] = b;
             let mut hs = cond.shape.clone();
             if let Some(first) = hs.first_mut() {
                 *first = b;
             }
-            let out = unet.run(vec![
+            let mut ins = vec![
                 (sample.name.clone(), Tensor::f32(&s, xs)),
                 (timestep.name.clone(), ts.clone()),
                 (hidden.name.clone(), Tensor::f32(&hs, emb)),
-            ])?;
+            ];
+            if let Some((pc, pu)) = &pooled {
+                let width = pc.shape.last().copied().unwrap_or(0);
+                let mut pv = Vec::new();
+                for u in uncond {
+                    pv.extend(if *u { pu.to_f32() } else { pc.to_f32() });
+                }
+                ins.push(("text_embeds".into(), Tensor::f32(&[b, width], pv)));
+                let ids = [wh as f32, ww as f32, 0.0, 0.0, wh as f32, ww as f32];
+                ins.push(("time_ids".into(), Tensor::f32(&[b, 6], ids.iter().copied().cycle().take(6 * b as usize).collect())));
+            }
+            let out = unet.run(ins)?;
             let o = out
                 .iter()
                 .find(|(n, _)| n == "out_sample")
@@ -458,7 +546,7 @@ pub fn diffuse_with(loader: &dyn Loader, model: &Model, img: &Image, hole: &[f32
         };
         let cond_v = cond.to_f32();
         let pred = if !guided {
-            run(x, cond_v, 1)?
+            run(x, cond_v, 1, &[false])?
         } else {
             let uncond_v = uncond.to_f32();
             let (pu, pc) = if batch_two {
@@ -466,10 +554,10 @@ pub fn diffuse_with(loader: &dyn Loader, model: &Model, img: &Image, hole: &[f32
                 xs.extend_from_slice(&x);
                 let mut emb = uncond_v;
                 emb.extend_from_slice(&cond_v);
-                let o = run(xs, emb, 2)?;
+                let o = run(xs, emb, 2, &[true, false])?;
                 (o.get(..ln).unwrap_or(&[]).to_vec(), o.get(ln..2 * ln).unwrap_or(&[]).to_vec())
             } else {
-                (run(x.clone(), uncond_v, 1)?, run(x, cond_v, 1)?)
+                (run(x.clone(), uncond_v, 1, &[true])?, run(x, cond_v, 1, &[false])?)
             };
             let g = opts.guidance;
             pu.iter().zip(&pc).map(|(u, c)| u + g * (c - u)).collect()

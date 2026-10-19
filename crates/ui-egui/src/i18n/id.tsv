@@ -3183,6 +3183,10 @@ curves	Smooth	Haluskan
 # View › Guides › right-click a guide
 	Edit Selected Guides	Edit Panduan Terpilih
 	Clear Selected Guides	Hapus Panduan Terpilih
+	Pasting from other apps is unavailable	Menempel dari aplikasi lain tidak tersedia
+	PhotoCraft can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	PhotoCraft tidak dapat mengakses papan klip sistem dalam sesi ini. Di Wayland, sandbox Flatpak menyembunyikan protokol yang digunakan untuk membaca gambar dari aplikasi lain.
+	To paste from other apps, start PhotoCraft under XWayland: `{command}`	Untuk menempel dari aplikasi lain, jalankan PhotoCraft di bawah XWayland: `{command}`
+	Nothing to paste: PhotoCraft can't read the system clipboard here	Tidak ada yang ditempel: PhotoCraft tidak dapat membaca papan klip sistem di sini
 	Delete this set	Hapus set ini
 	New Set…	Set Baru…
 	PhotoCraft Defaults	Bawaan PhotoCraft
@@ -3226,6 +3230,12 @@ curves	Smooth	Haluskan
 	Increase Brush Size	Perbesar ukuran kuas
 	Decrease Brush Hardness	Kurangi kekerasan kuas
 	Increase Brush Hardness	Tambah kekerasan kuas
+	Memory Usage	Penggunaan memori
+	Per-document RAM limit (MB)	Batas RAM per dokumen (MB)
+	Installed RAM: {ram} MB; this limit: {percent}%	RAM terpasang: {ram} MB; batas ini: {percent}%
+	Limits each open document's pixels plus History. Oldest undo states are discarded when the limit is exceeded.	Membatasi piksel plus Riwayat setiap dokumen terbuka. Status urungkan tertua dibuang jika batas terlampaui.
+	Applies immediately when saved. Memory is not reserved in advance.	Berlaku segera setelah disimpan. Memori tidak dipesan di muka.
+	With GPU Memory set to Automatic, this also limits the GPU layer budget. That budget is capped at one quarter of installed RAM and, when known, three eighths of the graphics card's memory, with a 512 MB minimum. Raising this limit beyond those caps does not increase the GPU budget.	Jika Memori GPU Otomatis, ini juga membatasi anggaran GPU. Plafon seperempat RAM dan, jika diketahui, tiga per delapan memori kartu, minimum 512 MB. Menaikkan batas tidak menambah anggaran GPU.
 	Use	Gunakan
 	In Front	Di Depan
 	Behind	Di Belakang

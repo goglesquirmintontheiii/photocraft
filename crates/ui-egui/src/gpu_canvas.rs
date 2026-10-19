@@ -36,6 +36,10 @@ pub use photocraft_gpu::{DeviceHealth, Fault};
 
 /// Default tile side; documents up to this size (and the device limit) use a single texture.
 pub const DEFAULT_TILE: u32 = 8192;
+/// Mip levels no larger than this on either side are redrawn whole on every edit rather than
+/// just their damage (see [`mip_damage`], #6418). Every corrupted level measured was at most
+/// 64 px; this leaves a factor of two.
+const WHOLE_MIP_SIDE: u32 = 128;
 const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
 /// Canvas texture format of high-bit documents (see [`GpuCanvas::format_for`]).
 const FORMAT_HIGH: wgpu::TextureFormat = wgpu::TextureFormat::Rgba16Float;
@@ -1847,6 +1851,20 @@ fn mip_count(w: u32, h: u32) -> u32 {
     32 - w.max(h).max(1).leading_zeros()
 }
 
+/// The rect (x0, y0, x1, y1) of a `lw`×`lh` mip level to redraw when `prev` changed in the level
+/// above: that damage halved and padded by one texel for odd-size rounding, or the whole level
+/// when it is at most [`WHOLE_MIP_SIDE`] on either side. On AMD's Vulkan driver a pass that draws
+/// only part of a level of 64 px or less corrupts texels outside its scissor, at the level's
+/// top-left (#6418: RX 6900 XT, driver 26.8.1; DX12 on the same card is fine). Such a level costs
+/// next to nothing to redraw, so this holds for every adapter; the levels after it are smaller
+/// still, so the rest of the chain is redrawn whole too.
+fn mip_damage([x0, y0, x1, y1]: [u32; 4], lw: u32, lh: u32) -> [u32; 4] {
+    if lw.max(lh) <= WHOLE_MIP_SIDE {
+        return [0, 0, lw, lh];
+    }
+    [(x0 / 2).saturating_sub(1), (y0 / 2).saturating_sub(1), (x1.div_ceil(2) + 1).min(lw), (y1.div_ceil(2) + 1).min(lh)]
+}
+
 /// A buffer holding `contents`, like `DeviceExt::create_buffer_init` but without its panic when
 /// the device was lost (an invalid buffer has no mapped range): the buffer is then just invalid.
 fn init_buffer(device: &wgpu::Device, label: &str, contents: &[u8], usage: wgpu::BufferUsages) -> wgpu::Buffer {
@@ -1944,9 +1962,7 @@ impl DocTextures {
             (x0, y0, x1, y1) = (x0 - tx, y0 - ty, x1 - tx, y1 - ty);
             for level in 1..t.levels.len() {
                 let (lw, lh) = ((tw >> level).max(1), (th >> level).max(1));
-                // Damage at this level, padded by one texel for odd-size rounding.
-                (x0, y0) = ((x0 / 2).saturating_sub(1), (y0 / 2).saturating_sub(1));
-                (x1, y1) = ((x1.div_ceil(2) + 1).min(lw), (y1.div_ceil(2) + 1).min(lh));
+                [x0, y0, x1, y1] = mip_damage([x0, y0, x1, y1], lw, lh);
                 let bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
                     label: Some("pc_mip"),
                     layout: &res.mip_bgl,
@@ -2565,6 +2581,17 @@ mod tests {
         assert!(separate_mip_targets(Dx12, nvidia, Some("1")));
         assert!(!separate_mip_targets(Dx12, intel, Some(" 0 ")));
         assert!(separate_mip_targets(Dx12, intel, Some("yes")));
+    }
+
+    /// #6418: levels of at most WHOLE_MIP_SIDE are redrawn whole; larger ones keep the damage.
+    #[test]
+    fn small_mip_levels_are_redrawn_whole() {
+        // A 3 × 3 dab at (800, 500) of a 1791 × 1083 tile, at mip 1 (895 × 541): halved and padded.
+        assert_eq!(mip_damage([800, 500, 803, 503], 895, 541), [399, 249, 403, 253]);
+        // At most 128 px on either side: the whole level, wherever the damage is.
+        assert_eq!(mip_damage([100, 60, 102, 63], 111, 67), [0, 0, 111, 67]);
+        assert_eq!(mip_damage([0, 0, 1, 1], 128, 2), [0, 0, 128, 2]);
+        assert_eq!(mip_damage([0, 0, 1, 1], 129, 2), [0, 0, 2, 2]);
     }
 
     #[test]

@@ -6,6 +6,8 @@ pub static ICONS: &[(&str, &[u8])] = &[
     ("generative-brush", include_bytes!("../../../assets/icons/generative-brush.svg")),
     ("generative-removal", include_bytes!("../../../assets/icons/generative-removal.svg")),
     ("infill", include_bytes!("../../../assets/icons/infill.svg")),
+    ("generative-enhance", include_bytes!("../../../assets/icons/generative-enhance.svg")),
+    ("object-selection-brush", include_bytes!("../../../assets/icons/object-selection-brush.svg")),
     ("reflection-removal", include_bytes!("../../../assets/icons/reflection-removal.svg")),
     ("align-center", include_bytes!("../../../assets/icons/align-center.svg")),
     ("align-justify", include_bytes!("../../../assets/icons/align-justify.svg")),

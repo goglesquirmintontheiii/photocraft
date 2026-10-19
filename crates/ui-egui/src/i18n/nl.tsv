@@ -3950,6 +3950,10 @@ curves	Smooth	Vloeiend maken
 # View › Guides › right-click a guide
 	Edit Selected Guides	Geselecteerde hulplijnen bewerken
 	Clear Selected Guides	Geselecteerde hulplijnen wissen
+	Pasting from other apps is unavailable	Plakken vanuit andere apps is niet beschikbaar
+	PhotoCraft can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	PhotoCraft heeft in deze sessie geen toegang tot het systeemklembord. Onder Wayland verbergt een Flatpak-sandbox het protocol waarmee afbeeldingen uit andere apps worden gelezen.
+	To paste from other apps, start PhotoCraft under XWayland: `{command}`	Om vanuit andere apps te plakken, start je PhotoCraft onder XWayland: `{command}`
+	Nothing to paste: PhotoCraft can't read the system clipboard here	Niets om te plakken: PhotoCraft kan het systeemklembord hier niet lezen
 	Delete this set	Deze set verwijderen
 	New Set…	Nieuwe set…
 	PhotoCraft Defaults	PhotoCraft-standaard
@@ -3991,6 +3995,12 @@ curves	Smooth	Vloeiend maken
 	Increase Brush Size	Penseelgrootte vergroten
 	Decrease Brush Hardness	Penseelhardheid verlagen
 	Increase Brush Hardness	Penseelhardheid verhogen
+	Memory Usage	Geheugengebruik
+	Per-document RAM limit (MB)	RAM-limiet per document (MB)
+	Installed RAM: {ram} MB; this limit: {percent}%	Geïnstalleerd RAM: {ram} MB; deze limiet: {percent}%
+	Limits each open document's pixels plus History. Oldest undo states are discarded when the limit is exceeded.	Beperkt pixels plus Geschiedenis van elk geopend document. Oudste herstelstappen verdwijnen als de limiet wordt overschreden.
+	Applies immediately when saved. Memory is not reserved in advance.	Geldt meteen na opslaan. Geheugen wordt niet vooraf gereserveerd.
+	With GPU Memory set to Automatic, this also limits the GPU layer budget. That budget is capped at one quarter of installed RAM and, when known, three eighths of the graphics card's memory, with a 512 MB minimum. Raising this limit beyond those caps does not increase the GPU budget.	Bij GPU-geheugen Automatisch beperkt dit ook het GPU-laagbudget. Maximum is een kwart RAM en, indien bekend, drie achtste van het videogeheugen, minstens 512 MB. Hoger zetten vergroot het GPU-budget niet.
 	Use	Gebruiken
 	In Front	Voor
 	Behind	Achter

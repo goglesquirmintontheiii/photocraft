@@ -17,27 +17,76 @@
 //! [`Error::Unsupported`](crate::Error) or [`Error::Invalid`](crate::Error) saying what didn't fit.
 
 pub mod diffusion;
+pub mod enhance;
 pub mod net;
 pub mod tokenizer;
 
 use crate::{Error, Result};
 use net::{Data, Elem, Loader, Network, Port, Tensor};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 
-static GPU_ALLOWED: AtomicBool = AtomicBool::new(true);
+/// Where models run. Each choice falls back to the next one that can run a model: an NPU to
+/// the graphics card, the graphics card to the processor.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Device {
+    /// The graphics card, else the processor.
+    #[default]
+    Auto,
+    /// A neural processing unit (Intel AI Boost, AMD XDNA, Qualcomm Hexagon: through DirectML on
+    /// Windows), else the graphics card, else the processor.
+    Npu,
+    /// The processor only.
+    Cpu,
+}
 
-/// Whether models may run on the GPU (on by default; they fall back to the CPU when no GPU
-/// runtime works). Networks already loaded keep where they run.
-pub fn set_gpu_allowed(on: bool) {
-    if GPU_ALLOWED.swap(on, Ordering::Relaxed) != on {
+impl Device {
+    pub const ALL: [Device; 3] = [Device::Auto, Device::Npu, Device::Cpu];
+
+    pub fn id(self) -> &'static str {
+        match self {
+            Device::Auto => "auto",
+            Device::Npu => "npu",
+            Device::Cpu => "cpu",
+        }
+    }
+
+    pub fn from_id(id: &str) -> Option<Device> {
+        Device::ALL.into_iter().find(|d| d.id() == id)
+    }
+
+    pub fn title(self) -> &'static str {
+        match self {
+            Device::Auto => "Graphics card (GPU)",
+            Device::Npu => "NPU (AI accelerator)",
+            Device::Cpu => "Processor (CPU)",
+        }
+    }
+}
+
+static DEVICE: AtomicU8 = AtomicU8::new(0);
+
+/// Where models run from now on (networks already loaded are loaded again).
+pub fn set_device(d: Device) {
+    let v = Device::ALL.iter().position(|x| *x == d).unwrap_or(0) as u8;
+    if DEVICE.swap(v, Ordering::Relaxed) != v {
         net::clear_cache();
     }
 }
 
+pub fn device() -> Device {
+    Device::ALL.get(usize::from(DEVICE.load(Ordering::Relaxed))).copied().unwrap_or_default()
+}
+
+/// Whether models may run on the GPU (on by default). `false` is [`Device::Cpu`].
+pub fn set_gpu_allowed(on: bool) {
+    set_device(if on { Device::Auto } else { Device::Cpu });
+}
+
 pub fn gpu_allowed() -> bool {
-    GPU_ALLOWED.load(Ordering::Relaxed)
+    device() != Device::Cpu
 }
 
 /// Whether this build can run models.

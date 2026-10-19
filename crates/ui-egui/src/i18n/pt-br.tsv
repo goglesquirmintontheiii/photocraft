@@ -3980,6 +3980,10 @@ layerLabel	No Color	Sem cor
 # View › Guides › right-click a guide
 	Edit Selected Guides	Editar guias selecionadas
 	Clear Selected Guides	Limpar guias selecionadas
+	Pasting from other apps is unavailable	Colar de outros aplicativos não está disponível
+	PhotoCraft can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	O PhotoCraft não consegue acessar a área de transferência do sistema nesta sessão. No Wayland, a sandbox do Flatpak oculta o protocolo pelo qual as imagens de outros aplicativos são lidas.
+	To paste from other apps, start PhotoCraft under XWayland: `{command}`	Para colar de outros aplicativos, execute o PhotoCraft no XWayland: `{command}`
+	Nothing to paste: PhotoCraft can't read the system clipboard here	Nada para colar: o PhotoCraft não consegue ler a área de transferência do sistema aqui
 	Delete this set	Excluir este conjunto
 	New Set…	Novo conjunto…
 	PhotoCraft Defaults	Padrões do PhotoCraft
@@ -4021,6 +4025,12 @@ layerLabel	No Color	Sem cor
 	Increase Brush Size	Aumentar tamanho do pincel
 	Decrease Brush Hardness	Diminuir dureza do pincel
 	Increase Brush Hardness	Aumentar dureza do pincel
+	Memory Usage	Uso de memória
+	Per-document RAM limit (MB)	Limite de RAM por documento (MB)
+	Installed RAM: {ram} MB; this limit: {percent}%	RAM instalada: {ram} MB; este limite: {percent}%
+	Limits each open document's pixels plus History. Oldest undo states are discarded when the limit is exceeded.	Limita os pixels mais o Histórico de cada documento aberto. Os estados de desfazer mais antigos são descartados ao exceder o limite.
+	Applies immediately when saved. Memory is not reserved in advance.	Aplica-se ao salvar. A memória não é reservada antecipadamente.
+	With GPU Memory set to Automatic, this also limits the GPU layer budget. That budget is capped at one quarter of installed RAM and, when known, three eighths of the graphics card's memory, with a 512 MB minimum. Raising this limit beyond those caps does not increase the GPU budget.	Com Memória GPU Automática, também limita o orçamento GPU. O teto é um quarto da RAM e, se conhecido, três oitavos da memória da placa, mínimo 512 MB. Aumentar o limite não aumenta o orçamento GPU.
 	Use	Usar
 	In Front	Na frente
 	Behind	Atrás

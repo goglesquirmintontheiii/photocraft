@@ -159,8 +159,14 @@ sync_github_name = false
 real_name = "Ufuk Efe"
 sync_github_name = true
 
+[people.nicolasfalesy]
+sync_github_name = true
+
 [people.sidney]
 real_name = "Sidney Markowitz"
+sync_github_name = true
+
+[people.TaylorBurke]
 sync_github_name = true
 
 [people.1Git2Clone]
@@ -171,4 +177,7 @@ display_name = "Netter"
 sync_github_name = false
 
 [people.Byxis]
+sync_github_name = true
+
+[people.00xJS]
 sync_github_name = true

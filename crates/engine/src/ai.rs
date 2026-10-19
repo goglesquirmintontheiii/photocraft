@@ -30,9 +30,35 @@ pub(crate) fn enabled(s: &Session, kind: ModelKind) -> std::result::Result<(), S
     Ok(())
 }
 
+/// A model that may still have to be prepared (a Stable Diffusion checkpoint made into a
+/// pipeline) before it runs, on the job's thread.
+pub(crate) struct Prepare(Option<(Manager, String)>);
+
+impl Prepare {
+    /// Prepares `model` if it needs it (progress as "Preparing the model…").
+    pub(crate) fn run(self, model: &mut Model, report: &mut dyn FnMut(f32, &str) -> bool) -> photocraft_ml::Result<()> {
+        let Some((m, id)) = self.0 else { return Ok(()) };
+        if photocraft_ml::convert::checkpoint_to_convert(&model.files).is_none() {
+            return Ok(());
+        }
+        model.files = m.prepare(&id, &mut |f| report(f, "Preparing the model for its first use…"))?;
+        Ok(())
+    }
+}
+
+/// [`resolve`], with what prepares the model if it is a checkpoint.
+pub(crate) fn resolve_prepared(s: &Session, cmd: &str, kind: ModelKind, p: &Value) -> Result<(Model, Prepare)> {
+    let (model, id) = resolve_id(s, cmd, kind, p)?;
+    Ok((model, Prepare(s.models.clone().map(|m| (m, id)))))
+}
+
 /// The model a command runs: `"model"` (an installed id) if given, else the best enabled model of
 /// `kind`.
 pub(crate) fn resolve(s: &Session, cmd: &str, kind: ModelKind, p: &Value) -> Result<Model> {
+    resolve_id(s, cmd, kind, p).map(|(m, _)| m)
+}
+
+fn resolve_id(s: &Session, cmd: &str, kind: ModelKind, p: &Value) -> Result<(Model, String)> {
     let m = s.models.as_ref().ok_or_else(|| EngineError::Other("AI models need the desktop app.".into()))?;
     let installed = m.installed();
     let chosen = match p.get("model") {
@@ -53,7 +79,7 @@ pub(crate) fn resolve(s: &Session, cmd: &str, kind: ModelKind, p: &Value) -> Res
         Some(_) => return Err(bad(cmd, "`model` is an installed model's id")),
     };
     let files = m.files_of(&chosen.id).ok_or_else(|| EngineError::Other(format!("{}'s files are gone from the models folder.", chosen.name)))?;
-    Ok(Model { name: chosen.name, files, catalog_id: chosen.catalog_id })
+    Ok((Model { name: chosen.name, files, catalog_id: chosen.catalog_id }, chosen.id))
 }
 
 /// The models a command can run, best first, for its `params` and for agents (`ai.models`).
@@ -80,6 +106,7 @@ pub(crate) fn reporter<'a>(ctx: &'a crate::jobs::JobCtx, label: &'a str, lo: f32
     move |f, msg| {
         let place = match photocraft_ml::infer::last_backend().as_deref() {
             Some("CPU") => " (CPU)",
+            Some("NPU") => " (NPU)",
             Some(_) => " (GPU)",
             None => "",
         };
@@ -92,7 +119,7 @@ pub(crate) fn reporter<'a>(ctx: &'a crate::jobs::JobCtx, label: &'a str, lo: f32
 /// Lists the installed, enabled models for each use (what the tools' model menus offer).
 fn models_cmd(s: &mut Session, p: &Value) -> Result<Value> {
     let kinds: Vec<ModelKind> = match p.get("kind").and_then(Value::as_str) {
-        Some(k) => vec![ModelKind::from_id(k).ok_or_else(|| bad("ai.models", "`kind` is segmentation|matting|removal|reflection|inpainting|other"))?],
+        Some(k) => vec![ModelKind::from_id(k).ok_or_else(|| bad("ai.models", "`kind` is segmentation|matting|removal|reflection|inpainting|enhance|other"))?],
         None => ModelKind::ALL.to_vec(),
     };
     let mut out = serde_json::Map::new();
@@ -108,7 +135,7 @@ pub fn specs() -> Vec<crate::commands::CommandSpec> {
         label: "AI Models",
         menu: &[],
         shortcut: None,
-        params: r#"{"kind":"segmentation|matting|removal|reflection|inpainting|other"?} → {"runtime":bool (this build can run models),"models":{"<kind>":[{"id","name","recommended"}],…}} (installed and enabled, best first: what "model" in ai.* and the generative brushes takes)"#,
+        params: r#"{"kind":"segmentation|matting|removal|reflection|inpainting|enhance|other"?} → {"runtime":bool (this build can run models),"models":{"<kind>":[{"id","name","recommended"}],…}} (installed and enabled, best first: what "model" in ai.* and the generative brushes takes)"#,
         enabled: |_| Ok(()),
         run: models_cmd,
         journal: false,

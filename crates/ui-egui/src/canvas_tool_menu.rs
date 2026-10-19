@@ -254,6 +254,7 @@ pub const SELECTION_MENU: &[Row] = &[
     Some(("Stroke…", "edit.stroke")),
     Some(("Content-Aware Fill…", "edit.contentAwareFill")),
     Some(("Generative Fill…", "edit.generativeFill")),
+    Some(("Generative Sharpen…", "edit.generativeSharpen")),
     None,
     Some(("Last Filter", "filter.lastFilter")),
     None,
@@ -317,6 +318,7 @@ pub fn applies(tool: Tool) -> bool {
             | Tool::MagicWand
             | Tool::ObjectSelection
             | Tool::AiObjectSelection
+            | Tool::ObjectSelectionBrush
     ) || path_menu(tool)
 }
 
@@ -568,7 +570,8 @@ pub fn open_pasteboard(app: &mut PhotocraftApp, ctx: &Context, tool: Tool, pos: 
 }
 
 /// Right-click at document point `doc` on a guide that `tool` could drag (the Move tool, or ⌘ with
-/// a selection tool): select the guide and open the guide menu at screen point `pos`.
+/// a tool on which ⌘ moves guides, `canvas::command_guide_at`): select the guide and open the guide
+/// menu at screen point `pos`.
 pub fn open_guide(app: &mut PhotocraftApp, ctx: &Context, tool: Tool, mods: egui::Modifiers, pos: [f32; 2], doc: [f64; 2]) -> bool {
     if !pos.iter().all(|v| v.is_finite()) || !doc.iter().all(|v| v.is_finite()) {
         return false;
@@ -1398,6 +1401,7 @@ mod tests {
                 Some("Stroke…"),
                 Some("Content-Aware Fill…"),
                 Some("Generative Fill…"),
+                Some("Generative Sharpen…"),
                 None,
                 Some("Last Filter"),
                 None,

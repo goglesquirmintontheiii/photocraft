@@ -1,6 +1,7 @@
 //! AI Object Selection: Object Selection with a local AI model (Segment Anything, or a subject
-//! matting model). Drag a box around something, or click it, and the model's mask becomes the
-//! selection, combined with the current one by the mode, in one undo step.
+//! matting model). Drag a box around something, click it, or (the Object Selection Brush) paint
+//! over it, and the model's mask becomes the selection, combined with the current one by the
+//! mode, in one undo step.
 //!
 //! A box is analysed on its own (with a margin), so a small object gets the model's full
 //! resolution; a click analyses the whole image (cached, so further clicks are quick). The
@@ -23,7 +24,12 @@ fn ai_enabled(s: &Session) -> std::result::Result<(), String> {
 enum Ask {
     Box(Rect),
     Point(f32, f32),
+    /// Points along a brush stroke: all on the object.
+    Stroke(Vec<(f32, f32)>),
 }
+
+/// Most points a stroke gives the model (evenly spaced along it).
+const STROKE_POINTS: usize = 12;
 
 /// The area analysed: the box with room around it (the model needs context), or the canvas.
 fn area_for(ask: &Ask, canvas: Rect) -> Rect {
@@ -33,15 +39,51 @@ fn area_for(ask: &Ask, canvas: Rect) -> Rect {
             r.inflate(m).intersect(&canvas)
         }
         Ask::Point(..) => canvas,
+        Ask::Stroke(pts) => {
+            let (mut x0, mut y0, mut x1, mut y1) = (f32::MAX, f32::MAX, f32::MIN, f32::MIN);
+            for (x, y) in pts {
+                (x0, y0, x1, y1) = (x0.min(*x), y0.min(*y), x1.max(*x), y1.max(*y));
+            }
+            // The object reaches past the stroke: plenty of room around it.
+            let side = (x1 - x0).max(y1 - y0);
+            let m = (side * 0.75).max(64.0);
+            Rect::new((x0 - m).floor() as i32, (y0 - m).floor() as i32, (x1 + m).ceil() as i32 + 1, (y1 + m).ceil() as i32 + 1).intersect(&canvas)
+        }
     }
 }
 
+/// A stroke's points (`"points": [[x, y], …]`), thinned to at most [`STROKE_POINTS`].
+fn stroke_points(p: &Value) -> Result<Option<Vec<(f32, f32)>>> {
+    let Some(list) = p.get("points") else { return Ok(None) };
+    let arr = list.as_array().ok_or_else(|| bad(CMD, "`points` is [[x, y], …]"))?;
+    let mut pts = Vec::new();
+    for v in arr.iter().take(100_000) {
+        let a = v.as_array().ok_or_else(|| bad(CMD, "`points` is [[x, y], …]"))?;
+        let (Some(x), Some(y)) = (a.first().and_then(Value::as_f64), a.get(1).and_then(Value::as_f64)) else {
+            return Err(bad(CMD, "`points` is [[x, y], …]"));
+        };
+        if !x.is_finite() || !y.is_finite() || x.abs() > 1e7 || y.abs() > 1e7 {
+            return Err(bad(CMD, "`points` must be finite"));
+        }
+        pts.push((x as f32, y as f32));
+    }
+    if pts.is_empty() {
+        return Err(bad(CMD, "`points` is empty"));
+    }
+    if pts.len() > STROKE_POINTS {
+        let n = pts.len();
+        pts = (0..STROKE_POINTS).filter_map(|i| pts.get(i * (n - 1) / (STROKE_POINTS - 1)).copied()).collect();
+    }
+    Ok(Some(pts))
+}
+
 fn ai_object(s: &mut Session, p: &Value) -> Result<Value> {
-    let ask = match (rect_param(p), point_param(p)) {
-        (Some(r), _) if r.width() >= 2 && r.height() >= 2 => Ask::Box(r),
-        (_, Some((x, y))) => Ask::Point(x, y),
-        (Some(r), None) => Ask::Point(r.x0 as f32 + 0.5, r.y0 as f32 + 0.5),
-        _ => return Err(bad(CMD, "needs \"rect\": [x, y, w, h] or \"point\": [x, y]")),
+    let ask = match (stroke_points(p)?, rect_param(p), point_param(p)) {
+        (Some(pts), ..) => Ask::Stroke(pts),
+        (_, Some(r), _) if r.width() >= 2 && r.height() >= 2 => Ask::Box(r),
+        (_, _, Some((x, y))) => Ask::Point(x, y),
+        (_, Some(r), None) => Ask::Point(r.x0 as f32 + 0.5, r.y0 as f32 + 0.5),
+        _ => return Err(bad(CMD, "needs \"rect\": [x, y, w, h], \"point\": [x, y] or \"points\": [[x, y], …] (a stroke)")),
     };
     let model = crate::ai::resolve(s, CMD, ModelKind::Segmentation, p)?;
     let all_layers = b(p, "sampleAllLayers", false);
@@ -51,6 +93,12 @@ fn ai_object(s: &mut Session, p: &Value) -> Result<Value> {
     let probe = match &ask {
         Ask::Box(r) => r.intersect(&canvas),
         Ask::Point(x, y) => Rect::from_xywh(x.floor() as i32, y.floor() as i32, 1, 1).intersect(&canvas),
+        Ask::Stroke(pts) => pts
+            .iter()
+            .map(|(x, y)| Rect::from_xywh(x.floor() as i32, y.floor() as i32, 1, 1))
+            .reduce(|a, b| a.union(&b))
+            .unwrap_or_default()
+            .intersect(&canvas),
     };
     if probe.is_empty() {
         return Err(bad(CMD, "that's outside the canvas"));
@@ -99,6 +147,7 @@ fn find(
     let prompt = match ask {
         Ask::Box(r) => Prompt::Box([(r.x0 - area.x0) as f32 * sx, (r.y0 - area.y0) as f32 * sy, (r.x1 - area.x0) as f32 * sx, (r.y1 - area.y0) as f32 * sy]),
         Ask::Point(x, y) => Prompt::Points(vec![([(x - area.x0 as f32) * sx, (y - area.y0 as f32) * sy], true)]),
+        Ask::Stroke(pts) => Prompt::Points(pts.iter().map(|(x, y)| ([(x - area.x0 as f32) * sx, (y - area.y0 as f32) * sy], true)).collect()),
     };
     let mut report = crate::ai::reporter(ctx, LABEL, 0.0, 0.9);
     let mask = infer::segment(model, &image, &prompt, &mut report).map_err(crate::ai::error)?;
@@ -163,7 +212,7 @@ pub(super) fn specs() -> Vec<CommandSpec> {
         label: LABEL,
         menu: &[],
         shortcut: None,
-        params: r##"{"rect":[x,y,w,h] | "point":[x,y],"model":id?=best enabled Object Selection model (see ai.models),"mode":"replace|add|subtract|intersect"="replace","sampleAllLayers":bool=false} → {"selected","changed","bounds"?} (a background job: a local AI model finds the object in the box or under the point)"##,
+        params: r##"{"rect":[x,y,w,h] | "point":[x,y] | "points":[[x,y],…] (a stroke over the object: the Object Selection Brush),"model":id?=best enabled Object Selection model (see ai.models),"mode":"replace|add|subtract|intersect"="replace","sampleAllLayers":bool=false} → {"selected","changed","bounds"?} (a background job: a local AI model finds the object in the box or under the point)"##,
         enabled: ai_enabled,
         run: ai_object,
         journal: true,
