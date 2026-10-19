@@ -154,6 +154,13 @@ fn resolve_hf_repo(repo: &str, rev: &str, subdir: &str, get_json: &dyn Fn(&str) 
     let tree = get_json(&format!("https://huggingface.co/api/models/{repo}/tree/{rev}?recursive=true"))?;
     let entries = tree.as_array().ok_or_else(|| Error::Network("Hugging Face sent an unexpected file list.".into()))?;
     let prefix = if subdir.is_empty() { String::new() } else { format!("{}/", subdir.trim_matches('/')) };
+    if let Some(r) = diffusion_pipeline(repo, rev, &prefix, entries) {
+        let license = get_json(&format!("https://huggingface.co/api/models/{repo}"))
+            .ok()
+            .and_then(|v| v.pointer("/cardData/license").and_then(Value::as_str).map(str::to_string))
+            .unwrap_or_default();
+        return Ok(Resolved { license, ..r });
+    }
     let mut weights: Vec<(String, Option<u64>, Option<String>)> = entries
         .iter()
         .filter(|e| e.get("type").and_then(Value::as_str) == Some("file"))
@@ -200,6 +207,86 @@ fn resolve_hf_repo(repo: &str, rev: &str, subdir: &str, get_json: &dyn Fn(&str) 
         files.push(RemoteFile { url: hf_url(repo, rev, &path), name: base, size, sha256 });
     }
     Ok(Resolved { name: repo.rsplit('/').next().unwrap_or(repo).to_string(), files, license })
+}
+
+/// The parts of a diffusers ONNX pipeline repository (`model_index.json` beside `unet/`,
+/// `text_encoder/`, `vae_encoder/`, `vae_decoder/`, `tokenizer/`, `scheduler/`) that inpainting
+/// runs, kept in their folders: the safety checker and feature extractor are left out.
+fn diffusion_pipeline(repo: &str, rev: &str, prefix: &str, entries: &[Value]) -> Option<Resolved> {
+    const PARTS: [&str; 6] = ["text_encoder", "unet", "vae_encoder", "vae_decoder", "tokenizer", "scheduler"];
+    let files: Vec<(String, Option<u64>, Option<String>)> = entries
+        .iter()
+        .filter(|e| e.get("type").and_then(Value::as_str) == Some("file"))
+        .filter_map(|e| {
+            let path = e.get("path")?.as_str()?;
+            let rel = path.strip_prefix(prefix)?.to_string();
+            let lfs = e.get("lfs");
+            let size = lfs.and_then(|l| l.get("size")).or_else(|| e.get("size")).and_then(Value::as_u64);
+            let sha = lfs.and_then(|l| l.get("oid")).and_then(Value::as_str).filter(|s| is_sha256(s)).map(str::to_ascii_lowercase);
+            Some((rel, size, sha))
+        })
+        .collect();
+    let has = |p: &str| files.iter().any(|(r, ..)| r == p);
+    let onnx_in = |dir: &str| files.iter().any(|(r, ..)| r.starts_with(&format!("{dir}/")) && ext(r) == "onnx");
+    if !has("model_index.json") || !onnx_in("unet") || !onnx_in("text_encoder") || !onnx_in("vae_decoder") {
+        return None;
+    }
+    let mut picked = Vec::new();
+    for (rel, size, sha) in files {
+        let mut parts = rel.split('/');
+        let keep = match (parts.next(), parts.next(), parts.next()) {
+            (Some("model_index.json"), None, _) => true,
+            (Some(dir), Some(file), None) if PARTS.contains(&dir) => {
+                matches!(ext(file).as_str(), "onnx" | "onnx_data" | "pb" | "data" | "json" | "txt") || file == "weights"
+            }
+            _ => false,
+        };
+        if keep {
+            let name = rel.split('/').map(safe_file_name).collect::<Vec<_>>().join("/");
+            picked.push(RemoteFile { url: hf_url(repo, rev, &format!("{prefix}{rel}")), name, size, sha256: sha });
+        }
+    }
+    Some(Resolved { name: repo.rsplit('/').next().unwrap_or(repo).to_string(), files: picked, license: String::new() })
+}
+
+/// The files of a diffusion pipeline folder on this computer, with their names inside the model
+/// (`unet/model.onnx` …): what [`diffusion_pipeline`] keeps of a repository.
+pub(crate) fn pipeline_files_in(dir: &std::path::Path) -> Result<Vec<(std::path::PathBuf, String)>> {
+    let mut entries = Vec::new();
+    let mut paths = std::collections::HashMap::new();
+    let mut visit = |rel: String, p: std::path::PathBuf| {
+        let size = std::fs::metadata(&p).map(|m| m.len()).unwrap_or(0);
+        entries.push(serde_json::json!({"type": "file", "path": rel.clone(), "size": size}));
+        paths.insert(rel, p);
+    };
+    let read = |d: &std::path::Path| std::fs::read_dir(d).map_err(|e| Error::io(&format!("Couldn't read {}", d.display()), e));
+    for e in read(dir)?.flatten() {
+        let name = e.file_name().to_string_lossy().into_owned();
+        match e.file_type() {
+            Ok(t) if t.is_file() => visit(name, e.path()),
+            Ok(t) if t.is_dir() => {
+                for f in read(&e.path())?.flatten() {
+                    if f.file_type().is_ok_and(|t| t.is_file()) {
+                        visit(format!("{name}/{}", f.file_name().to_string_lossy()), f.path());
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    let r = diffusion_pipeline("local/folder", "main", "", &entries).ok_or_else(|| {
+        Error::Invalid(
+            "That folder isn't an ONNX diffusion pipeline: it needs model_index.json and unet, text_encoder and vae_decoder folders with model.onnx in each.".into(),
+        )
+    })?;
+    Ok(r
+        .files
+        .into_iter()
+        .filter_map(|f| {
+            let rel = f.url.rsplit_once("/resolve/main/").map(|(_, r)| percent_decode(r))?;
+            Some((paths.get(&rel)?.clone(), f.name))
+        })
+        .collect())
 }
 
 fn resolve_civitai(model: Option<u64>, version: Option<u64>, get_json: &dyn Fn(&str) -> Result<Value>) -> Result<Resolved> {
@@ -346,6 +433,43 @@ mod tests {
         let t = tree(&[("README.md", 1)]);
         assert!(matches!(Link::parse("a/b").unwrap().resolve(&|_| Ok(t.clone())), Err(Error::NotFound(_))));
         assert!(Link::parse("a/b").unwrap().resolve(&|_| Ok(json!({"error": "nope"}))).is_err());
+    }
+
+    #[test]
+    fn a_diffusion_pipeline_keeps_its_folders_and_skips_the_safety_checker() {
+        let t = tree(&[
+            ("model_index.json", 640),
+            ("README.md", 10),
+            ("safety_checker/model.onnx", 608_552_254),
+            ("feature_extractor/preprocessor_config.json", 466),
+            ("scheduler/scheduler_config.json", 528),
+            ("text_encoder/model.onnx", 246_368_629),
+            ("tokenizer/vocab.json", 1_059_962),
+            ("tokenizer/merges.txt", 524_619),
+            ("unet/model.onnx", 1_973_332),
+            ("unet/model.onnx_data", 3_438_141_440),
+            ("vae_decoder/model.onnx", 99_093_889),
+            ("vae_encoder/model.onnx", 68_430_178),
+        ]);
+        let r = Link::parse("someone/sd-inpainting-onnx").unwrap().resolve(&|u: &str| if u.contains("/tree/") { Ok(t.clone()) } else { Ok(json!({})) }).unwrap();
+        let mut names: Vec<&str> = r.files.iter().map(|f| f.name.as_str()).collect();
+        names.sort_unstable();
+        assert_eq!(
+            names,
+            [
+                "model_index.json",
+                "scheduler/scheduler_config.json",
+                "text_encoder/model.onnx",
+                "tokenizer/merges.txt",
+                "tokenizer/vocab.json",
+                "unet/model.onnx",
+                "unet/model.onnx_data",
+                "vae_decoder/model.onnx",
+                "vae_encoder/model.onnx"
+            ]
+        );
+        assert!(r.files.iter().all(|f| crate::store::valid_model_path(&f.name)));
+        assert!(r.files.iter().any(|f| f.url.ends_with("/resolve/main/unet/model.onnx_data")));
     }
 
     #[test]

@@ -4032,3 +4032,28 @@ cameraData	Lens	Lens
 	Generative Removal Brush Tool	Üretken Kaldırma Fırçası
 	Reflection Removal Brush Tool	Yansıma Kaldırma Fırçası
 	API key	API anahtarı
+
+# Generative Fill dialog and Infill brush
+	Generative Fill…	Üretken Dolgu…
+	Infill Brush Tool	Doldurma Fırçası
+	A Stable Diffusion ONNX pipeline folder (model_index.json with unet, text_encoder, vae_encoder and vae_decoder folders)	Stable Diffusion ONNX işlem hattı klasörü (model_index.json ile unet, text_encoder, vae_encoder ve vae_decoder klasörleri)
+	AI models run in the desktop app.	Yapay zeka modelleri masaüstü uygulamasında çalışır.
+	All three can be left empty. Paint over the area; it fills when you let go.	Üçü de boş bırakılabilir. Alanın üzerine boyayın; bıraktığınızda doldurulur.
+	Choose Folder…	Klasör Seç…
+	Ctrl+click to switch it in every section	Her bölümde değiştirmek için Ctrl+tıklayın
+	Describe what to put there, e.g. a cat sitting on the bench	Oraya ne konacağını tarif edin, ör. bankta oturan bir kedi
+	Generative Fill needs a model. Download one in Edit › Preferences › AI Models (Generative Fill & Infill).	Üretken Dolgu için bir model gerekir. Düzen › Tercihler › Yapay Zeka Modelleri (Üretken Dolgu ve Doldurma) bölümünden bir model indirin.
+	Make a variation	Varyasyon oluştur
+	Negative prompt	Negatif komut
+	New seed	Yeni tohum
+	ONNX, safetensors, checkpoint or GGUF files (pick an ONNX model and its .data file together), or a diffusion pipeline's folder.	ONNX, safetensors, checkpoint veya GGUF dosyaları (ONNX modelini .data dosyasıyla birlikte seçin) ya da bir difüzyon işlem hattının klasörü.
+	Paint over the area to fill	Doldurulacak alanın üzerine boyayın
+	Press + (or Enter in the prompt) to make a variation, or OK to fill with one.	Varyasyon oluşturmak için + (veya komut alanında Enter), biriyle doldurmak için Tamam düğmesine basın.
+	Prompt	Komut
+	Prompt, negative prompt and seed	Komut, negatif komut ve tohum
+	Prompt…	Komut…
+	Random each time	Her seferinde rastgele
+	The same seed and prompt give the same result. Leave it empty for a new one each time.	Aynı tohum ve komut aynı sonucu verir. Her seferinde yenisi için boş bırakın.
+	Variation {n} · seed {seed}	Varyasyon {n} · tohum {seed}
+	Variations	Varyasyonlar
+	What to avoid, e.g. blurry, text	Kaçınılacaklar, ör. bulanık, metin

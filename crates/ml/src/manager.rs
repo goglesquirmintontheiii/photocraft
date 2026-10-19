@@ -2,7 +2,7 @@
 //! on worker threads and report progress through [`Job`]s.
 
 use crate::source::{Link, RemoteFile, Resolved};
-use crate::store::{InstalledModel, ModelSource, Store, safe_file_name, valid_file_name};
+use crate::store::{InstalledModel, ModelSource, Store, safe_file_name, valid_model_path};
 use crate::{CatalogModel, Error, ModelKind, RECOMMENDED, Result};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -162,6 +162,16 @@ impl Manager {
         self.lock().store.set_enabled(id, kind, on)
     }
 
+    /// Switches every use of a model on or off at once.
+    pub fn set_enabled_everywhere(&self, id: &str, on: bool) -> Result<()> {
+        let mut inner = self.lock();
+        let kinds = inner.store.models().iter().find(|m| m.id == id).map(|m| m.kinds.clone()).ok_or_else(|| Error::NotFound("That model isn't installed.".into()))?;
+        for k in kinds {
+            inner.store.set_enabled(id, k, on)?;
+        }
+        Ok(())
+    }
+
     pub fn rename(&self, id: &str, name: &str) -> Result<()> {
         self.lock().store.rename(id, name)
     }
@@ -310,11 +320,32 @@ impl Manager {
             .filter(|n| !n.trim().is_empty())
             .map(|n| n.trim().to_string())
             .unwrap_or_else(|| if first.is_empty() { "Imported model".into() } else { first });
+        let files: Vec<(PathBuf, String)> =
+            paths.iter().map(|p| (p.clone(), safe_file_name(&p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default()))).collect();
+        let source = paths.first().map(|p| p.display().to_string()).unwrap_or_default();
+        self.start_copy(files, total, display, kinds, source)
+    }
+
+    /// Starts importing a Stable Diffusion ONNX pipeline folder from this computer (the
+    /// diffusers layout: `model_index.json` beside `unet/`, `text_encoder/`, `vae_encoder/`,
+    /// `vae_decoder/`, `tokenizer/`, `scheduler/`), keeping its folders.
+    pub fn import_folder(&self, dir: &Path, kinds: &[ModelKind], name: Option<String>) -> Result<JobId> {
+        let kinds = uses(kinds)?;
+        let files = crate::source::pipeline_files_in(dir)?;
+        let total = files.iter().map(|(p, _)| std::fs::metadata(p).map(|m| m.len()).unwrap_or(0)).fold(0u64, u64::saturating_add);
+        let folder = dir.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        let display = name
+            .filter(|n| !n.trim().is_empty())
+            .map(|n| n.trim().to_string())
+            .unwrap_or_else(|| if folder.is_empty() { "Imported model".into() } else { folder });
+        self.start_copy(files, total, display, kinds, dir.display().to_string())
+    }
+
+    fn start_copy(&self, files: Vec<(PathBuf, String)>, total: u64, display: String, kinds: Vec<ModelKind>, source: String) -> Result<JobId> {
         let (id, cancel) = self.new_job(JobKind::Import, display.clone(), kinds.clone(), Some(total), JobState::Running);
         let this = self.clone();
-        let paths = paths.to_vec();
         spawn(move || {
-            let r = this.copy_and_install(id, &cancel, &paths, display, &kinds);
+            let r = this.copy_and_install(id, &cancel, &files, display, &kinds, source);
             this.finish(id, r);
         });
         Ok(id)
@@ -342,7 +373,7 @@ impl Manager {
     }
 
     fn fetch_and_install(&self, id: JobId, cancel: &AtomicBool, resolved: Resolved, kinds: &[ModelKind], source: ModelSource) -> Result<()> {
-        if resolved.files.is_empty() || resolved.files.iter().any(|f| !valid_file_name(&f.name)) {
+        if resolved.files.is_empty() || resolved.files.iter().any(|f| !valid_model_path(&f.name)) {
             return Err(Error::Invalid("The model's files have unusable names.".into()));
         }
         let (model_id, staging) = self.stage(&resolved.name)?;
@@ -350,6 +381,9 @@ impl Manager {
             let mut before = 0u64;
             for f in &resolved.files {
                 let dest = staging.join(&f.name);
+                if let Some(parent) = dest.parent() {
+                    std::fs::create_dir_all(parent).map_err(|e| Error::io("Couldn't create a folder for the model", e))?;
+                }
                 let mut last = Instant::now();
                 crate::http::download(&f.url, &dest, f.size, f.sha256.as_deref(), cancel, &mut |done, total| {
                     // A few updates a second are enough for the progress bar.
@@ -391,18 +425,24 @@ impl Manager {
         result
     }
 
-    fn copy_and_install(&self, id: JobId, cancel: &AtomicBool, paths: &[PathBuf], name: String, kinds: &[ModelKind]) -> Result<()> {
+    fn copy_and_install(&self, id: JobId, cancel: &AtomicBool, files: &[(PathBuf, String)], name: String, kinds: &[ModelKind], source: String) -> Result<()> {
         let (model_id, staging) = self.stage(&name)?;
         let result = (|| {
-            let mut names = Vec::new();
+            let mut names: Vec<String> = Vec::new();
             let mut before = 0u64;
-            for p in paths {
-                let fname = safe_file_name(&p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default());
-                if names.contains(&fname) {
+            for (p, fname) in files {
+                if !valid_model_path(fname) {
+                    return Err(Error::Invalid(format!("{fname} isn't a usable file name.")));
+                }
+                if names.contains(fname) {
                     return Err(Error::Invalid(format!("Two of the files are named {fname}.")));
                 }
                 let mut from = std::fs::File::open(p).map_err(|e| Error::io(&format!("Couldn't open {}", p.display()), e))?;
-                let mut to = std::fs::File::create(staging.join(&fname)).map_err(|e| Error::io("Couldn't create the model file", e))?;
+                let dest = staging.join(fname);
+                if let Some(parent) = dest.parent() {
+                    std::fs::create_dir_all(parent).map_err(|e| Error::io("Couldn't create a folder for the model", e))?;
+                }
+                let mut to = std::fs::File::create(&dest).map_err(|e| Error::io("Couldn't create the model file", e))?;
                 let mut hasher = <sha2::Sha256 as sha2::Digest>::new();
                 let mut last = Instant::now();
                 let n = crate::http::pump(&mut from, &mut to, &mut hasher, 0, None, cancel, &mut |done, _| {
@@ -413,9 +453,9 @@ impl Manager {
                 })?;
                 before = before.saturating_add(n);
                 self.update(id, |j| j.done_bytes = before);
-                names.push(fname);
+                names.push(fname.clone());
             }
-            let source = ModelSource::File { path: paths.first().map(|p| p.display().to_string()).unwrap_or_default() };
+            let source = ModelSource::File { path: source };
             self.install(
                 &model_id,
                 &staging,
@@ -508,6 +548,33 @@ mod tests {
         assert_eq!(m.installed()[0].name, "Renamed");
         m.delete(&installed[0].id).unwrap();
         assert!(m.installed().is_empty());
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn a_pipeline_folder_imports_with_its_folders_and_ctrl_switches_every_use() {
+        let dir = temp("pipeline");
+        let src = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/tiny_sd");
+        let m = Manager::open(&dir.join("Models")).unwrap();
+        let id = m.import_folder(&src, &[ModelKind::Inpainting, ModelKind::Other], None).unwrap();
+        let job = wait(&m, id);
+        assert_eq!(job.state, JobState::Done, "{job:?}");
+        let installed = m.installed();
+        assert_eq!(installed[0].name, "tiny_sd");
+        assert!(installed[0].files.contains(&"unet/model.onnx".to_string()), "{:?}", installed[0].files);
+        let files = m.files_of(&installed[0].id).unwrap();
+        assert!(files.iter().all(|f| f.is_file()));
+        let model = crate::infer::Model { name: "t".into(), files, catalog_id: None };
+        assert!(crate::infer::diffusion::is_pipeline(&model));
+        // Reopening keeps the folders' files.
+        drop(m);
+        let m = Manager::open(&dir.join("Models")).unwrap();
+        assert_eq!(m.installed()[0].files, installed[0].files);
+        m.set_enabled_everywhere(&installed[0].id, false).unwrap();
+        assert!(m.available(ModelKind::Inpainting).is_empty() && m.available(ModelKind::Other).is_empty());
+        m.set_enabled_everywhere(&installed[0].id, true).unwrap();
+        assert_eq!(m.available(ModelKind::Other).len(), 1);
+        assert!(m.import_folder(&dir, &[ModelKind::Inpainting], None).is_err(), "not a pipeline");
         let _ = std::fs::remove_dir_all(dir);
     }
 

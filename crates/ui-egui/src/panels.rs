@@ -46,8 +46,8 @@ const TOOL_SECTIONS: &[&[&[Tool]]] = &[
     &[&[Tool::Hand, Tool::RotateView], &[Tool::Zoom]],
 ];
 
-/// The Generative Brush button's brushes (Infill joins them with Generative Fill).
-pub(crate) const GENERATIVE_BRUSHES: &[Tool] = &[Tool::GenerativeRemoval, Tool::ReflectionRemoval];
+/// The Generative Brush button's brushes.
+pub(crate) const GENERATIVE_BRUSHES: &[Tool] = &[Tool::GenerativeInfill, Tool::GenerativeRemoval, Tool::ReflectionRemoval];
 
 /// The Generative Brush slot: its button always shows the Generative Brush and a click opens its
 /// box of brushes, centred on the button, instead of picking a tool.
@@ -248,6 +248,31 @@ pub fn toolbar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
                                             ui.ctx(),
                                             |ui| {
                                                 egui::Frame::popup(ui.style()).show(ui, |ui| {
+                                                    if generative {
+                                                        // The Generative Brushes look like the toolbar's own tools: icons only,
+                                                        // with the name (and shortcut) when hovered.
+                                                        ui.spacing_mut().item_spacing = vec2(0.0, 2.0);
+                                                        for &item in slot.iter() {
+                                                            let tip = match crate::tool_shortcuts::shortcut(app, item) {
+                                                                Some(sc) => format!("{}  ({})", tl!(item.label()), crate::shortcuts::pretty(&sc)),
+                                                                None => tl!(item.label()).to_string(),
+                                                            };
+                                                            let r = icons::button_with_icon_size_tip(
+                                                                ui,
+                                                                icons::tool_icon(item),
+                                                                bx,
+                                                                toolbar_icon_size(bx, t.pro),
+                                                                item == app.ui.tool,
+                                                                &tip,
+                                                                true,
+                                                            );
+                                                            if r.clicked() {
+                                                                crate::tool_memory::select(app, item);
+                                                                ui.data_mut(|d| d.remove::<(egui::Id, Rect)>(flyout_id));
+                                                            }
+                                                        }
+                                                        return;
+                                                    }
                                                     let label_w = slot
                                                         .iter()
                                                         .map(|it| {

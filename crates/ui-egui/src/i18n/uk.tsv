@@ -4010,3 +4010,28 @@ curves	Smooth	Згладити
 	Generative Removal Brush Tool	Пензель «Генеративне видалення»
 	Reflection Removal Brush Tool	Пензель «Видалення відблисків»
 	API key	Ключ API
+
+# Generative Fill dialog and Infill brush
+	Generative Fill…	Генеративна заливка…
+	Infill Brush Tool	Пензель «Домальовування»
+	A Stable Diffusion ONNX pipeline folder (model_index.json with unet, text_encoder, vae_encoder and vae_decoder folders)	Папка конвеєра Stable Diffusion у форматі ONNX (model_index.json з папками unet, text_encoder, vae_encoder і vae_decoder)
+	AI models run in the desktop app.	Моделі ШІ працюють у настільному застосунку.
+	All three can be left empty. Paint over the area; it fills when you let go.	Усі три поля можна залишити порожніми. Замалюйте область; вона заповниться, щойно ви відпустите кнопку.
+	Choose Folder…	Вибрати папку…
+	Ctrl+click to switch it in every section	Ctrl+клацання перемикає його в усіх розділах
+	Describe what to put there, e.g. a cat sitting on the bench	Опишіть, що там має бути, наприклад кіт, що сидить на лавці
+	Generative Fill needs a model. Download one in Edit › Preferences › AI Models (Generative Fill & Infill).	Для генеративної заливки потрібна модель. Завантажте її в розділі Редагування › Налаштування › Моделі ШІ (Генеративна заливка й домальовування).
+	Make a variation	Створити варіант
+	Negative prompt	Негативний запит
+	New seed	Нове початкове значення
+	ONNX, safetensors, checkpoint or GGUF files (pick an ONNX model and its .data file together), or a diffusion pipeline's folder.	Файли ONNX, safetensors, checkpoint або GGUF (модель ONNX вибирайте разом із її файлом .data) або папка дифузійного конвеєра.
+	Paint over the area to fill	Замалюйте область, яку треба заповнити
+	Press + (or Enter in the prompt) to make a variation, or OK to fill with one.	Натисніть + (або Enter у полі запиту), щоб створити варіант, або «Гаразд», щоб залити одним із них.
+	Prompt	Запит
+	Prompt, negative prompt and seed	Запит, негативний запит і початкове значення
+	Prompt…	Запит…
+	Random each time	Щоразу випадкове
+	The same seed and prompt give the same result. Leave it empty for a new one each time.	Однакові початкове значення й запит дають однаковий результат. Залиште поле порожнім, щоб щоразу отримувати нове.
+	Variation {n} · seed {seed}	Варіант {n} · початкове значення {seed}
+	Variations	Варіанти
+	What to avoid, e.g. blurry, text	Чого уникати, наприклад розмиття, текст

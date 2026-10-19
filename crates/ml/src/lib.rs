@@ -64,9 +64,14 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// Installed, enabled models of `kind`, the most accurate first (catalog order, then imports by
 /// name): what a tool's model dropdown lists.
 pub fn available(installed: &[InstalledModel], kind: ModelKind) -> Vec<InstalledModel> {
+    // Recommended models made for this use first (a reflection model before the object removers
+    // that also fill reflections), then the others, each in catalog order; imported ones last.
     let rank = |m: &InstalledModel| match &m.catalog_id {
-        Some(id) => RECOMMENDED.iter().position(|c| c.id == id).unwrap_or(usize::MAX - 1),
-        None => usize::MAX,
+        Some(id) => match RECOMMENDED.iter().position(|c| c.id == id) {
+            Some(i) => (u8::from(RECOMMENDED[i].kind() != kind), i),
+            None => (2, 0),
+        },
+        None => (3, 0),
     };
     let mut out: Vec<InstalledModel> = installed.iter().filter(|m| m.enabled_for(kind)).cloned().collect();
     out.sort_by(|a, b| rank(a).cmp(&rank(b)).then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase())));

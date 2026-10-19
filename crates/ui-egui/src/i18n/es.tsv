@@ -4264,3 +4264,28 @@ navigator	Zoom	Zoom
 	Generative Removal Brush Tool	Pincel Eliminación generativa
 	Reflection Removal Brush Tool	Pincel Eliminación de reflejos
 	API key	Clave de API
+
+# Generative Fill dialog and Infill brush
+	Generative Fill…	Relleno generativo…
+	Infill Brush Tool	Pincel Infill
+	A Stable Diffusion ONNX pipeline folder (model_index.json with unet, text_encoder, vae_encoder and vae_decoder folders)	Una carpeta de pipeline ONNX de Stable Diffusion (model_index.json con las carpetas unet, text_encoder, vae_encoder y vae_decoder)
+	AI models run in the desktop app.	Los modelos de IA se ejecutan en la aplicación de escritorio.
+	All three can be left empty. Paint over the area; it fills when you let go.	Los tres pueden quedar vacíos. Pinta sobre la zona; se rellena al soltar.
+	Choose Folder…	Elegir carpeta…
+	Ctrl+click to switch it in every section	Ctrl+clic para cambiarlo en todas las secciones
+	Describe what to put there, e.g. a cat sitting on the bench	Describe qué poner ahí, p. ej. un gato sentado en el banco
+	Generative Fill needs a model. Download one in Edit › Preferences › AI Models (Generative Fill & Infill).	El Relleno generativo necesita un modelo. Descarga uno en Edición › Preferencias › Modelos de IA (Relleno generativo e infill).
+	Make a variation	Crear una variación
+	Negative prompt	Indicación negativa
+	New seed	Nueva semilla
+	ONNX, safetensors, checkpoint or GGUF files (pick an ONNX model and its .data file together), or a diffusion pipeline's folder.	Archivos ONNX, safetensors, checkpoint o GGUF (elige un modelo ONNX junto con su archivo .data), o la carpeta de un pipeline de difusión.
+	Paint over the area to fill	Pinta sobre la zona que quieres rellenar
+	Press + (or Enter in the prompt) to make a variation, or OK to fill with one.	Pulsa + (o Intro en la indicación) para crear una variación, o Aceptar para rellenar con una.
+	Prompt	Indicación
+	Prompt, negative prompt and seed	Indicación, indicación negativa y semilla
+	Prompt…	Indicación…
+	Random each time	Aleatoria cada vez
+	The same seed and prompt give the same result. Leave it empty for a new one each time.	La misma semilla e indicación dan el mismo resultado. Déjala vacía para obtener una nueva cada vez.
+	Variation {n} · seed {seed}	Variación {n} · semilla {seed}
+	Variations	Variaciones
+	What to avoid, e.g. blurry, text	Qué evitar, p. ej. borroso, texto

@@ -4375,3 +4375,28 @@ shape	Appearance	Izgled
 	Generative Removal Brush Tool	Četkica Generativno uklanjanje
 	Reflection Removal Brush Tool	Četkica Uklanjanje odsjaja
 	API key	API ključ
+
+# Generative Fill dialog and Infill brush
+	Generative Fill…	Generativno popunjavanje…
+	Infill Brush Tool	Četkica Dopunjavanje
+	A Stable Diffusion ONNX pipeline folder (model_index.json with unet, text_encoder, vae_encoder and vae_decoder folders)	Fascikla Stable Diffusion ONNX protočnog sistema (model_index.json sa fasciklama unet, text_encoder, vae_encoder i vae_decoder)
+	AI models run in the desktop app.	AI modeli rade u desktop aplikaciji.
+	All three can be left empty. Paint over the area; it fills when you let go.	Sva tri polja mogu ostati prazna. Prebojite oblast; popuniće se kada pustite taster.
+	Choose Folder…	Izaberi fasciklu…
+	Ctrl+click to switch it in every section	Ctrl+klik ga uključuje ili isključuje u svakom odeljku
+	Describe what to put there, e.g. a cat sitting on the bench	Opišite šta treba da bude tamo, npr. mačka koja sedi na klupi
+	Generative Fill needs a model. Download one in Edit › Preferences › AI Models (Generative Fill & Infill).	Za generativno popunjavanje potreban je model. Preuzmite ga u Uređivanje › Podešavanja › AI modeli (Generativno popunjavanje i dopunjavanje).
+	Make a variation	Napravi varijaciju
+	Negative prompt	Negativni upit
+	New seed	Novo seme
+	ONNX, safetensors, checkpoint or GGUF files (pick an ONNX model and its .data file together), or a diffusion pipeline's folder.	ONNX, safetensors, checkpoint ili GGUF datoteke (izaberite ONNX model zajedno sa njegovom .data datotekom) ili fascikla difuzionog protočnog sistema.
+	Paint over the area to fill	Prebojite oblast koju treba popuniti
+	Press + (or Enter in the prompt) to make a variation, or OK to fill with one.	Pritisnite + (ili Enter u upitu) da napravite varijaciju, ili U redu da popunite jednom od njih.
+	Prompt	Upit
+	Prompt, negative prompt and seed	Upit, negativni upit i seme
+	Prompt…	Upit…
+	Random each time	Svaki put nasumično
+	The same seed and prompt give the same result. Leave it empty for a new one each time.	Isto seme i upit daju isti rezultat. Ostavite prazno za novo seme svaki put.
+	Variation {n} · seed {seed}	Varijacija {n} · seme {seed}
+	Variations	Varijacije
+	What to avoid, e.g. blurry, text	Šta izbeći, npr. mutno, tekst

@@ -815,6 +815,7 @@ pub(crate) fn freehand_tool(tool: Tool) -> bool {
             | Tool::BackgroundEraser
             | Tool::HistoryBrush
             | Tool::Remove
+            | Tool::GenerativeInfill
             | Tool::GenerativeRemoval
             | Tool::ReflectionRemoval
             | Tool::SpotHealing
@@ -5005,7 +5006,7 @@ fn draw_drag_preview(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &View
                 // The Remove Tool tints what it will remove, like Photoshop's.
                 Tool::Remove => crate::theme::Tokens::get(painter.ctx()).danger.gamma_multiply(0.45),
                 // The Generative Brushes tint what the model will fill in the accent colour.
-                Tool::GenerativeRemoval | Tool::ReflectionRemoval => crate::theme::Tokens::get(painter.ctx()).accent.gamma_multiply(0.45),
+                Tool::GenerativeInfill | Tool::GenerativeRemoval | Tool::ReflectionRemoval => crate::theme::Tokens::get(painter.ctx()).accent.gamma_multiply(0.45),
                 // Photoshop paints the area to heal in half-opaque dark grey; a faint white trail
                 // barely showed on light pixels (#7342).
                 Tool::SpotHealing => Color32::from_black_alpha(128),

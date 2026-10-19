@@ -3297,3 +3297,29 @@ curves	Smooth	Haluskan
 	Generative Removal Brush Tool	Kuas Penghapusan Generatif
 	Reflection Removal Brush Tool	Kuas Penghapusan Pantulan
 	API key	Kunci API
+
+# Generative Fill dialog and Infill brush
+	Generative Fill…	Isi Generatif…
+	Infill Brush Tool	Kuas Infill
+	A Stable Diffusion ONNX pipeline folder (model_index.json with unet, text_encoder, vae_encoder and vae_decoder folders)	Folder pipeline ONNX Stable Diffusion (model_index.json dengan folder unet, text_encoder, vae_encoder, dan vae_decoder)
+	AI models run in the desktop app.	Model AI berjalan di aplikasi desktop.
+	All three can be left empty. Paint over the area; it fills when you let go.	Ketiganya boleh dikosongkan. Lukis di atas area; area terisi saat Anda melepasnya.
+	Choose Folder…	Pilih Folder…
+	Ctrl+click to switch it in every section	Ctrl+klik untuk mengalihkannya di setiap bagian
+	Describe what to put there, e.g. a cat sitting on the bench	Jelaskan apa yang ditaruh di sana, mis. kucing yang duduk di bangku
+	Generative Fill needs a model. Download one in Edit › Preferences › AI Models (Generative Fill & Infill).	Isi Generatif memerlukan model. Unduh satu di Edit › Preferensi › Model AI (Isi Generatif & Infill).
+	Make a variation	Buat variasi
+	Negative prompt	Prompt negatif
+	New seed	Seed baru
+	ONNX, safetensors, checkpoint or GGUF files (pick an ONNX model and its .data file together), or a diffusion pipeline's folder.	File ONNX, safetensors, checkpoint, atau GGUF (pilih model ONNX bersama file .data-nya), atau folder pipeline difusi.
+	Paint over the area to fill	Lukis di atas area yang akan diisi
+	Press + (or Enter in the prompt) to make a variation, or OK to fill with one.	Tekan + (atau Enter di prompt) untuk membuat variasi, atau OK untuk mengisi dengan salah satunya.
+	Prompt	Prompt
+	Prompt, negative prompt and seed	Prompt, prompt negatif, dan seed
+	Prompt…	Prompt…
+	Random each time	Acak setiap kali
+	The same seed and prompt give the same result. Leave it empty for a new one each time.	Seed dan prompt yang sama memberi hasil yang sama. Kosongkan untuk seed baru setiap kali.
+	Variation {n} · seed {seed}	Variasi {n} · seed {seed}
+	Variations	Variasi
+	What to avoid, e.g. blurry, text	Yang dihindari, mis. buram, teks
+	Seed	Seed

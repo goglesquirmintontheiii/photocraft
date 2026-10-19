@@ -4062,3 +4062,28 @@ curves	Smooth	Vloeiend maken
 	Generative Removal Brush Tool	Penseel Generatief verwijderen
 	Reflection Removal Brush Tool	Penseel Reflecties verwijderen
 	API key	API-sleutel
+
+# Generative Fill dialog and Infill brush
+	Generative Fill…	Generatief vullen…
+	Infill Brush Tool	Penseel Infill
+	A Stable Diffusion ONNX pipeline folder (model_index.json with unet, text_encoder, vae_encoder and vae_decoder folders)	Een Stable Diffusion ONNX-pipelinemap (model_index.json met de mappen unet, text_encoder, vae_encoder en vae_decoder)
+	AI models run in the desktop app.	AI-modellen draaien in de desktop-app.
+	All three can be left empty. Paint over the area; it fills when you let go.	Alle drie mogen leeg blijven. Schilder over het gebied; het wordt gevuld zodra je loslaat.
+	Choose Folder…	Map kiezen…
+	Ctrl+click to switch it in every section	Ctrl+klik om het in elke sectie om te schakelen
+	Describe what to put there, e.g. a cat sitting on the bench	Beschrijf wat er moet komen, bijv. een kat die op het bankje zit
+	Generative Fill needs a model. Download one in Edit › Preferences › AI Models (Generative Fill & Infill).	Generatief vullen heeft een model nodig. Download er een via Bewerken › Voorkeuren › AI-modellen (Generatief vullen en infill).
+	Make a variation	Variatie maken
+	Negative prompt	Negatieve prompt
+	New seed	Nieuwe startwaarde
+	ONNX, safetensors, checkpoint or GGUF files (pick an ONNX model and its .data file together), or a diffusion pipeline's folder.	ONNX-, safetensors-, checkpoint- of GGUF-bestanden (kies een ONNX-model samen met het bijbehorende .data-bestand), of de map van een diffusiepipeline.
+	Paint over the area to fill	Schilder over het te vullen gebied
+	Press + (or Enter in the prompt) to make a variation, or OK to fill with one.	Druk op + (of Enter in de prompt) om een variatie te maken, of op OK om met een ervan te vullen.
+	Prompt	Prompt
+	Prompt, negative prompt and seed	Prompt, negatieve prompt en startwaarde
+	Prompt…	Prompt…
+	Random each time	Elke keer willekeurig
+	The same seed and prompt give the same result. Leave it empty for a new one each time.	Dezelfde startwaarde en prompt geven hetzelfde resultaat. Laat leeg voor elke keer een nieuwe.
+	Variation {n} · seed {seed}	Variatie {n} · startwaarde {seed}
+	Variations	Variaties
+	What to avoid, e.g. blurry, text	Wat te vermijden, bijv. wazig, tekst

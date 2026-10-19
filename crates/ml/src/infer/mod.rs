@@ -4,6 +4,8 @@
 //!   (Hugging Face `onnx-community` exports), Segment Anything / MobileSAM (encoder plus
 //!   `sam_mask_decoder`), or a subject-matting model run on the box.
 //! - [`matte`]: subject alpha for the whole image (BiRefNet, RMBG).
+//! - [`diffusion::diffuse`]: fills a hole from a prompt (the Infill brush, Generative Fill) with a
+//!   Stable Diffusion ONNX pipeline.
 //! - [`inpaint`]: fills a hole (Generative Removal, Reflection Removal): LaMa-style networks
 //!   (image and mask in, 0–1 floats), MI-GAN (8-bit image and mask), or an image-to-image network
 //!   with one input (a dedicated reflection-removal model), whose output is used inside the hole.
@@ -14,7 +16,9 @@
 //! reports progress and can be cancelled, and nothing here panics on a strange model: it returns
 //! [`Error::Unsupported`](crate::Error) or [`Error::Invalid`](crate::Error) saying what didn't fit.
 
+pub mod diffusion;
 pub mod net;
+pub mod tokenizer;
 
 use crate::{Error, Result};
 use net::{Data, Elem, Loader, Network, Port, Tensor};
@@ -113,7 +117,7 @@ fn single(model: &Model) -> Result<&PathBuf> {
 
 fn not_onnx(model: &Model) -> Error {
     Error::Unsupported(format!(
-        "{} isn't an ONNX model, so it can't run yet. AI Object Selection and the removal brushes run .onnx models; Stable Diffusion checkpoints are for Generative Fill.",
+        "{} isn't an ONNX model, so it can't run. AI Object Selection and the removal brushes run .onnx models.",
         model.name
     ))
 }
@@ -577,13 +581,24 @@ pub fn inpaint_with(loader: &dyn Loader, model: &Model, img: &Image, hole: &[f32
             };
             let px = resize(&img.rgb, w, h, 3, iw, ih);
             let out = n.run(vec![(image.name.clone(), Tensor::f32(&[1, 3, ih as i64, iw as i64], planar(&px, iw, ih, 1.0, [0.0; 3], [1.0; 3])))])?;
-            let t =
-                out.into_iter().map(|(_, t)| t).find(|t| t.len() == iw * ih * 3).ok_or_else(|| Error::Invalid("The model's result has an odd size.".into()))?;
+            // The cleaned image: an output named for it (reflection models also return the
+            // reflection layer), else the first three-channel image; it may be smaller than the input.
+            let rgb_image = |t: &Tensor| {
+                let d = shape_dims(t);
+                d.len() == 4 && d.get(1) == Some(&3) && d[2] > 0 && d[3] > 0
+            };
+            let t = output(&out, &["transmission", "output", "out"])
+                .filter(|t| rgb_image(t))
+                .or_else(|| out.iter().map(|(_, t)| t).find(|t| rgb_image(t)))
+                .ok_or_else(|| Error::Invalid("The model's result isn't an image.".into()))?;
+            let d = shape_dims(t);
+            let (ow, oh) = (d[3], d[2]);
             let mut v = t.to_f32();
+            v.truncate(ow * oh * 3);
             if v.iter().any(|x| *x > 1.5) {
                 v.iter_mut().for_each(|x| *x /= 255.0);
             }
-            resize(&interleave(&v, iw, ih), iw, ih, 3, w, h)
+            resize(&interleave(&v, ow, oh), ow, oh, 3, w, h)
         }
     };
     step(report, 1.0, "")?;

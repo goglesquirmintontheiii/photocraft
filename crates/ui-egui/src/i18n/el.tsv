@@ -4002,3 +4002,28 @@ curves	Smooth	Εξομάλυνση
 	Generative Removal Brush Tool	Πινέλο Παραγωγική αφαίρεση
 	Reflection Removal Brush Tool	Πινέλο Αφαίρεση αντανακλάσεων
 	API key	Κλειδί API
+
+# Generative Fill dialog and Infill brush
+	Generative Fill…	Παραγωγική γέμιση…
+	Infill Brush Tool	Πινέλο Συμπλήρωση
+	A Stable Diffusion ONNX pipeline folder (model_index.json with unet, text_encoder, vae_encoder and vae_decoder folders)	Φάκελος pipeline Stable Diffusion σε ONNX (model_index.json με τους φακέλους unet, text_encoder, vae_encoder και vae_decoder)
+	AI models run in the desktop app.	Τα μοντέλα ΤΝ εκτελούνται στην εφαρμογή υπολογιστή.
+	All three can be left empty. Paint over the area; it fills when you let go.	Και τα τρία μπορούν να μείνουν κενά. Βάψτε πάνω στην περιοχή· γεμίζει μόλις αφήσετε το κουμπί.
+	Choose Folder…	Επιλογή φακέλου…
+	Ctrl+click to switch it in every section	Ctrl+κλικ για εναλλαγή σε κάθε ενότητα
+	Describe what to put there, e.g. a cat sitting on the bench	Περιγράψτε τι θα μπει εκεί, π.χ. μια γάτα που κάθεται στο παγκάκι
+	Generative Fill needs a model. Download one in Edit › Preferences › AI Models (Generative Fill & Infill).	Η Παραγωγική γέμιση χρειάζεται μοντέλο. Κατεβάστε ένα από Επεξεργασία › Προτιμήσεις › Μοντέλα ΤΝ (Παραγωγική γέμιση και συμπλήρωση).
+	Make a variation	Δημιουργία παραλλαγής
+	Negative prompt	Αρνητική εντολή
+	New seed	Νέα αρχική τιμή
+	ONNX, safetensors, checkpoint or GGUF files (pick an ONNX model and its .data file together), or a diffusion pipeline's folder.	Αρχεία ONNX, safetensors, checkpoint ή GGUF (επιλέξτε ένα μοντέλο ONNX μαζί με το αρχείο .data του) ή ο φάκελος ενός pipeline διάχυσης.
+	Paint over the area to fill	Βάψτε πάνω στην περιοχή που θα γεμίσει
+	Press + (or Enter in the prompt) to make a variation, or OK to fill with one.	Πατήστε + (ή Enter στην εντολή) για να δημιουργήσετε παραλλαγή ή Εντάξει για γέμισμα με μία από αυτές.
+	Prompt	Εντολή
+	Prompt, negative prompt and seed	Εντολή, αρνητική εντολή και αρχική τιμή
+	Prompt…	Εντολή…
+	Random each time	Τυχαία κάθε φορά
+	The same seed and prompt give the same result. Leave it empty for a new one each time.	Η ίδια αρχική τιμή και εντολή δίνουν το ίδιο αποτέλεσμα. Αφήστε το κενό για νέα τιμή κάθε φορά.
+	Variation {n} · seed {seed}	Παραλλαγή {n} · αρχική τιμή {seed}
+	Variations	Παραλλαγές
+	What to avoid, e.g. blurry, text	Τι να αποφευχθεί, π.χ. θολό, κείμενο

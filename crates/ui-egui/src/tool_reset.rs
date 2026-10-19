@@ -152,6 +152,7 @@ pub fn option_keys(tool: Tool) -> &'static [&'static str] {
         Tool::QuickSelection => reset!(sample_all_layers, enhance_edge),
         Tool::ObjectSelection => reset!(sample_all_layers, enhance_edge, object_finder),
         Tool::AiObjectSelection => reset!(sample_all_layers, ai_select_model),
+        Tool::GenerativeInfill => reset!(sample_all_layers, infill_model, infill_prompt, infill_negative, infill_seed, gen_new_layer),
         Tool::GenerativeRemoval => reset!(sample_all_layers, gen_removal_model, gen_new_layer),
         Tool::ReflectionRemoval => reset!(sample_all_layers, reflection_model, gen_new_layer),
         Tool::Crop => reset!(

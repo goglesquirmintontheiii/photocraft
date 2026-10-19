@@ -102,6 +102,7 @@ pub mod flick_pan;
 mod font_preview;
 pub mod frame_tool;
 pub mod gallery_ui;
+pub mod generative_fill_ui;
 pub mod gpu_canvas;
 pub mod gpu_status;
 pub mod gradient_ui;
@@ -2864,6 +2865,8 @@ mod stamp_tests;
 
 #[cfg(test)]
 mod alt_click_tests;
+#[cfg(test)]
+mod ai_screenshot_tests;
 #[cfg(test)]
 mod status_bar_tests;
 #[cfg(test)]

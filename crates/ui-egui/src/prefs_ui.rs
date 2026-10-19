@@ -1084,6 +1084,19 @@ fn pick_model_files(app: &mut PhotocraftApp, pick: &Value) {
     // "Use as" still on its automatic guess: guess again from the chosen files' names.
     let auto = pick.get("auto").and_then(Value::as_bool).unwrap_or(false);
     let name = pick.get("name").and_then(Value::as_str).map(str::to_string);
+    if pick.get("folder").and_then(Value::as_bool) == Some(true) {
+        // A diffusion pipeline is for Generative Fill unless other uses were picked.
+        let kinds = if auto { vec![photocraft_ml::ModelKind::Inpainting] } else { kinds };
+        let asked = app.ask_folder(move |_app, path| {
+            manager.import_folder(std::path::Path::new(&path), &kinds, name).map(|job| json!({"importJob": job})).map_err(|e| e.to_string())
+        });
+        if let Err(e) = asked
+            && e != crate::file_dialog::CANCELLED
+        {
+            log::warn!("model folder import: {e}");
+        }
+        return;
+    }
     let initial_dir = crate::file_dialog::last_used_dir(&app.ui.recent_files);
     let extensions = Some(crate::ai_prefs_ui::MODEL_EXTENSIONS.iter().map(|e| (*e).to_string()).collect());
     let asked = app.ask_file(crate::FileDialogRequest::Open { multiple: true, initial_dir, extensions }, move |_app, answer| match answer {

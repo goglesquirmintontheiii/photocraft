@@ -3901,3 +3901,28 @@ curves	Smooth	Wygładź
 	Generative Removal Brush Tool	Pędzel Usuwanie generatywne
 	Reflection Removal Brush Tool	Pędzel Usuwanie odbić
 	API key	Klucz API
+
+# Generative Fill dialog and Infill brush
+	Generative Fill…	Wypełnienie generatywne…
+	Infill Brush Tool	Pędzel Infill
+	A Stable Diffusion ONNX pipeline folder (model_index.json with unet, text_encoder, vae_encoder and vae_decoder folders)	Folder potoku ONNX Stable Diffusion (model_index.json z folderami unet, text_encoder, vae_encoder i vae_decoder)
+	AI models run in the desktop app.	Modele AI działają w aplikacji desktopowej.
+	All three can be left empty. Paint over the area; it fills when you let go.	Wszystkie trzy pola mogą pozostać puste. Zamaluj obszar; wypełni się po puszczeniu przycisku.
+	Choose Folder…	Wybierz folder…
+	Ctrl+click to switch it in every section	Ctrl+kliknięcie przełącza go we wszystkich sekcjach
+	Describe what to put there, e.g. a cat sitting on the bench	Opisz, co ma się tam znaleźć, np. kot siedzący na ławce
+	Generative Fill needs a model. Download one in Edit › Preferences › AI Models (Generative Fill & Infill).	Wypełnienie generatywne wymaga modelu. Pobierz go w Edycja › Preferencje › Modele AI (Wypełnienie generatywne i infill).
+	Make a variation	Utwórz wariant
+	Negative prompt	Prompt negatywny
+	New seed	Nowe ziarno
+	ONNX, safetensors, checkpoint or GGUF files (pick an ONNX model and its .data file together), or a diffusion pipeline's folder.	Pliki ONNX, safetensors, checkpoint lub GGUF (wybierz model ONNX razem z jego plikiem .data) albo folder potoku dyfuzyjnego.
+	Paint over the area to fill	Zamaluj obszar do wypełnienia
+	Press + (or Enter in the prompt) to make a variation, or OK to fill with one.	Naciśnij + (lub Enter w polu promptu), aby utworzyć wariant, albo OK, aby wypełnić jednym z nich.
+	Prompt	Prompt
+	Prompt, negative prompt and seed	Prompt, prompt negatywny i ziarno losowania
+	Prompt…	Prompt…
+	Random each time	Za każdym razem losowe
+	The same seed and prompt give the same result. Leave it empty for a new one each time.	To samo ziarno i prompt dają ten sam wynik. Zostaw puste, aby za każdym razem użyć nowego.
+	Variation {n} · seed {seed}	Wariant {n} · ziarno {seed}
+	Variations	Warianty
+	What to avoid, e.g. blurry, text	Czego unikać, np. rozmycie, tekst

@@ -4221,3 +4221,28 @@ cameraRaw	Yellow	Sárga
 	Generative Removal Brush Tool	Generatív eltávolítás ecset
 	Reflection Removal Brush Tool	Tükröződés eltávolítása ecset
 	API key	API-kulcs
+
+# Generative Fill dialog and Infill brush
+	Generative Fill…	Generatív kitöltés…
+	Infill Brush Tool	Infill ecset
+	A Stable Diffusion ONNX pipeline folder (model_index.json with unet, text_encoder, vae_encoder and vae_decoder folders)	Stable Diffusion ONNX-folyamat mappája (model_index.json az unet, text_encoder, vae_encoder és vae_decoder mappákkal)
+	AI models run in the desktop app.	Az MI-modellek az asztali alkalmazásban futnak.
+	All three can be left empty. Paint over the area; it fills when you let go.	Mindhárom üresen hagyható. Fessen a terület fölé; a kitöltés a gomb felengedésekor történik.
+	Choose Folder…	Mappa kiválasztása…
+	Ctrl+click to switch it in every section	Ctrl+kattintással minden szakaszban átkapcsolja
+	Describe what to put there, e.g. a cat sitting on the bench	Írja le, mi kerüljön oda, pl. egy macska, amely a padon ül
+	Generative Fill needs a model. Download one in Edit › Preferences › AI Models (Generative Fill & Infill).	A Generatív kitöltéshez modell kell. Töltsön le egyet: Szerkesztés › Beállítások › MI-modellek (Generatív kitöltés és infill).
+	Make a variation	Változat készítése
+	Negative prompt	Negatív prompt
+	New seed	Új kezdőérték
+	ONNX, safetensors, checkpoint or GGUF files (pick an ONNX model and its .data file together), or a diffusion pipeline's folder.	ONNX-, safetensors-, checkpoint- vagy GGUF-fájlok (az ONNX-modellt a .data fájljával együtt válassza ki), vagy egy diffúziós folyamat mappája.
+	Paint over the area to fill	Fessen a kitöltendő terület fölé
+	Press + (or Enter in the prompt) to make a variation, or OK to fill with one.	A + (vagy a promptban az Enter) megnyomásával változatot készít, az OK gombbal pedig kitölt az egyikkel.
+	Prompt	Prompt
+	Prompt, negative prompt and seed	Prompt, negatív prompt és kezdőérték
+	Prompt…	Prompt…
+	Random each time	Minden alkalommal véletlenszerű
+	The same seed and prompt give the same result. Leave it empty for a new one each time.	Ugyanaz a kezdőérték és prompt ugyanazt az eredményt adja. Hagyja üresen, ha minden alkalommal újat szeretne.
+	Variation {n} · seed {seed}	{n}. változat · kezdőérték: {seed}
+	Variations	Változatok
+	What to avoid, e.g. blurry, text	Mit kerüljön, pl. elmosódott, szöveg

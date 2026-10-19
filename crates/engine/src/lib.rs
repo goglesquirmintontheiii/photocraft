@@ -510,6 +510,8 @@ pub struct Session {
     pub object_finder: smartselect_cmds::ObjectFinderCache,
     /// The local AI model manager ([`Session::set_models`]); `None` without one (tests, the web).
     pub(crate) models: Option<photocraft_ml::Manager>,
+    /// Edit › Generative Fill's variations while its dialog is open.
+    pub(crate) generative_fill: Option<retouch_cmds::generative_fill::State>,
     /// A finished live stroke offered to the `paint.stroke` / `paint.pencil` that commits it
     /// ([`Session::offer_live_stroke`]).
     pub(crate) live_commit: Option<brush_cmds::LiveCommit>,

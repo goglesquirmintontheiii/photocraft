@@ -3310,3 +3310,29 @@ curves	Smooth	Lisser
 	Generative Removal Brush Tool	Pinceau Suppression générative
 	Reflection Removal Brush Tool	Pinceau Suppression des reflets
 	API key	Clé d'API
+
+# Generative Fill dialog and Infill brush
+	Generative Fill…	Remplissage génératif…
+	Infill Brush Tool	Pinceau Infill
+	A Stable Diffusion ONNX pipeline folder (model_index.json with unet, text_encoder, vae_encoder and vae_decoder folders)	Un dossier de pipeline ONNX Stable Diffusion (model_index.json avec les dossiers unet, text_encoder, vae_encoder et vae_decoder)
+	AI models run in the desktop app.	Les modèles d'IA s'exécutent dans l'application de bureau.
+	All three can be left empty. Paint over the area; it fills when you let go.	Les trois peuvent rester vides. Peignez sur la zone ; elle se remplit quand vous relâchez.
+	Choose Folder…	Choisir un dossier…
+	Ctrl+click to switch it in every section	Ctrl+clic pour le basculer dans toutes les sections
+	Describe what to put there, e.g. a cat sitting on the bench	Décrivez ce qu'il faut y mettre, p. ex. un chat assis sur le banc
+	Generative Fill needs a model. Download one in Edit › Preferences › AI Models (Generative Fill & Infill).	Le Remplissage génératif a besoin d'un modèle. Téléchargez-en un dans Édition › Préférences › Modèles d'IA (Remplissage génératif et infill).
+	Make a variation	Créer une variante
+	Negative prompt	Prompt négatif
+	New seed	Nouvelle graine
+	ONNX, safetensors, checkpoint or GGUF files (pick an ONNX model and its .data file together), or a diffusion pipeline's folder.	Fichiers ONNX, safetensors, checkpoint ou GGUF (choisissez un modèle ONNX avec son fichier .data), ou le dossier d'un pipeline de diffusion.
+	Paint over the area to fill	Peignez sur la zone à remplir
+	Press + (or Enter in the prompt) to make a variation, or OK to fill with one.	Appuyez sur + (ou Entrée dans le prompt) pour créer une variante, ou sur OK pour remplir avec l'une d'elles.
+	Prompt	Prompt
+	Prompt, negative prompt and seed	Prompt, prompt négatif et graine
+	Prompt…	Prompt…
+	Random each time	Aléatoire à chaque fois
+	The same seed and prompt give the same result. Leave it empty for a new one each time.	La même graine et le même prompt donnent le même résultat. Laissez vide pour en obtenir une nouvelle à chaque fois.
+	Variation {n} · seed {seed}	Variante {n} · graine {seed}
+	Variations	Variantes
+	What to avoid, e.g. blurry, text	Ce qu'il faut éviter, p. ex. flou, texte
+	Seed	Graine

@@ -136,6 +136,7 @@ pub fn tool_icon(t: Tool) -> &'static str {
         Tool::QuickSelection => "quick-selection",
         Tool::ObjectSelection => "square-dashed-mouse-pointer",
         Tool::AiObjectSelection => "ai-object-selection",
+        Tool::GenerativeInfill => "infill",
         Tool::GenerativeRemoval => "generative-removal",
         Tool::ReflectionRemoval => "reflection-removal",
         Tool::Pen => "pen-tool",

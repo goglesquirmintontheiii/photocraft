@@ -207,6 +207,9 @@ pub(crate) fn invoke_unguarded(app: &mut PhotocraftApp, ctx: &egui::Context, id:
             Ok(Value::Null)
         }
         "layer.duplicate" if params.as_object().is_none_or(|o| o.is_empty()) => crate::duplicate_layer_ui::open(app),
+        // Edit › Generative Fill… opens its dialog; with parameters it runs at once (actions,
+        // agents).
+        "edit.generativeFill" if params.as_object().is_none_or(|o| o.is_empty()) => crate::generative_fill_ui::open(app),
         "file.new" if params.as_object().is_none_or(|o| o.is_empty()) => {
             let fields = app.new_document_fields();
             let d = app.ui.open_dialog(DialogKind::NewDocument, fields);

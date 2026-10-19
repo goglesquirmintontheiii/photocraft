@@ -3911,3 +3911,28 @@ navigator	Zoom	Zvětšení
 	Generative Removal Brush Tool	Štětec Generativní odstranění
 	Reflection Removal Brush Tool	Štětec Odstranění odlesků
 	API key	Klíč API
+
+# Generative Fill dialog and Infill brush
+	Generative Fill…	Generativní výplň…
+	Infill Brush Tool	Štětec Infill
+	A Stable Diffusion ONNX pipeline folder (model_index.json with unet, text_encoder, vae_encoder and vae_decoder folders)	Složka pipeline Stable Diffusion ve formátu ONNX (model_index.json se složkami unet, text_encoder, vae_encoder a vae_decoder)
+	AI models run in the desktop app.	Modely AI běží v desktopové aplikaci.
+	All three can be left empty. Paint over the area; it fills when you let go.	Všechna tři pole můžete nechat prázdná. Přemalujte oblast; vyplní se, jakmile pustíte tlačítko.
+	Choose Folder…	Vybrat složku…
+	Ctrl+click to switch it in every section	Ctrl+kliknutím ho přepnete ve všech sekcích
+	Describe what to put there, e.g. a cat sitting on the bench	Popište, co tam má být, např. kočka sedící na lavičce
+	Generative Fill needs a model. Download one in Edit › Preferences › AI Models (Generative Fill & Infill).	Generativní výplň potřebuje model. Stáhněte ho v Úpravy › Předvolby › Modely AI (Generativní výplň a infill).
+	Make a variation	Vytvořit variantu
+	Negative prompt	Negativní prompt
+	New seed	Nové semínko
+	ONNX, safetensors, checkpoint or GGUF files (pick an ONNX model and its .data file together), or a diffusion pipeline's folder.	Soubory ONNX, safetensors, checkpoint nebo GGUF (model ONNX vyberte spolu s jeho souborem .data), nebo složka difuzní pipeline.
+	Paint over the area to fill	Přemalujte oblast, kterou chcete vyplnit
+	Press + (or Enter in the prompt) to make a variation, or OK to fill with one.	Stisknutím + (nebo Enter v promptu) vytvoříte variantu, tlačítkem OK oblast jednou z nich vyplníte.
+	Prompt	Prompt
+	Prompt, negative prompt and seed	Prompt, negativní prompt a semínko
+	Prompt…	Prompt…
+	Random each time	Pokaždé náhodně
+	The same seed and prompt give the same result. Leave it empty for a new one each time.	Stejné semínko a prompt dají stejný výsledek. Nechte pole prázdné, chcete-li pokaždé nový.
+	Variation {n} · seed {seed}	Varianta {n} · semínko {seed}
+	Variations	Varianty
+	What to avoid, e.g. blurry, text	Čemu se vyhnout, např. rozmazané, text

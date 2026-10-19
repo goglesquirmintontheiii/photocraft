@@ -3790,3 +3790,28 @@ curves	Smooth	Làm mượt
 	Generative Removal Brush Tool	Cọ Xóa tạo sinh
 	Reflection Removal Brush Tool	Cọ Xóa phản chiếu
 	API key	Khóa API
+
+# Generative Fill dialog and Infill brush
+	Generative Fill…	Tô tạo sinh…
+	Infill Brush Tool	Cọ Lấp đầy
+	A Stable Diffusion ONNX pipeline folder (model_index.json with unet, text_encoder, vae_encoder and vae_decoder folders)	Thư mục pipeline ONNX của Stable Diffusion (model_index.json cùng các thư mục unet, text_encoder, vae_encoder và vae_decoder)
+	AI models run in the desktop app.	Mô hình AI chạy trong ứng dụng máy tính.
+	All three can be left empty. Paint over the area; it fills when you let go.	Cả ba đều có thể để trống. Tô lên vùng cần lấp; vùng sẽ được lấp khi bạn thả chuột.
+	Choose Folder…	Chọn thư mục…
+	Ctrl+click to switch it in every section	Ctrl+nhấp để bật/tắt ở mọi mục
+	Describe what to put there, e.g. a cat sitting on the bench	Mô tả thứ cần đặt vào đó, ví dụ: một con mèo ngồi trên ghế dài
+	Generative Fill needs a model. Download one in Edit › Preferences › AI Models (Generative Fill & Infill).	Tô tạo sinh cần một mô hình. Hãy tải một mô hình trong Chỉnh sửa › Tùy chọn › Mô hình AI (Tô tạo sinh và lấp đầy).
+	Make a variation	Tạo một biến thể
+	Negative prompt	Câu lệnh phủ định
+	New seed	Hạt giống mới
+	ONNX, safetensors, checkpoint or GGUF files (pick an ONNX model and its .data file together), or a diffusion pipeline's folder.	Tệp ONNX, safetensors, checkpoint hoặc GGUF (chọn mô hình ONNX cùng với tệp .data của nó), hoặc thư mục của một pipeline khuếch tán.
+	Paint over the area to fill	Tô lên vùng cần lấp đầy
+	Press + (or Enter in the prompt) to make a variation, or OK to fill with one.	Nhấn + (hoặc Enter trong ô câu lệnh) để tạo biến thể, hoặc OK để lấp đầy bằng một biến thể.
+	Prompt	Câu lệnh
+	Prompt, negative prompt and seed	Câu lệnh, câu lệnh phủ định và hạt giống
+	Prompt…	Câu lệnh…
+	Random each time	Ngẫu nhiên mỗi lần
+	The same seed and prompt give the same result. Leave it empty for a new one each time.	Cùng hạt giống và câu lệnh sẽ cho cùng kết quả. Để trống để có hạt giống mới mỗi lần.
+	Variation {n} · seed {seed}	Biến thể {n} · hạt giống {seed}
+	Variations	Biến thể
+	What to avoid, e.g. blurry, text	Những gì cần tránh, ví dụ: mờ, chữ

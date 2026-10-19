@@ -4092,3 +4092,28 @@ layerLabel	No Color	Sem cor
 	Generative Removal Brush Tool	Pincel Remoção generativa
 	Reflection Removal Brush Tool	Pincel Remoção de reflexos
 	API key	Chave de API
+
+# Generative Fill dialog and Infill brush
+	Generative Fill…	Preenchimento generativo…
+	Infill Brush Tool	Pincel Infill
+	A Stable Diffusion ONNX pipeline folder (model_index.json with unet, text_encoder, vae_encoder and vae_decoder folders)	Uma pasta de pipeline ONNX do Stable Diffusion (model_index.json com as pastas unet, text_encoder, vae_encoder e vae_decoder)
+	AI models run in the desktop app.	Os modelos de IA rodam no aplicativo para desktop.
+	All three can be left empty. Paint over the area; it fills when you let go.	Os três podem ficar vazios. Pinte sobre a área; ela é preenchida quando você solta.
+	Choose Folder…	Escolher pasta…
+	Ctrl+click to switch it in every section	Ctrl+clique para alterná-lo em todas as seções
+	Describe what to put there, e.g. a cat sitting on the bench	Descreva o que colocar ali, por ex. um gato sentado no banco
+	Generative Fill needs a model. Download one in Edit › Preferences › AI Models (Generative Fill & Infill).	O Preenchimento generativo precisa de um modelo. Baixe um em Editar › Preferências › Modelos de IA (Preenchimento generativo e infill).
+	Make a variation	Criar uma variação
+	Negative prompt	Prompt negativo
+	New seed	Nova semente
+	ONNX, safetensors, checkpoint or GGUF files (pick an ONNX model and its .data file together), or a diffusion pipeline's folder.	Arquivos ONNX, safetensors, checkpoint ou GGUF (escolha um modelo ONNX junto com o arquivo .data dele) ou a pasta de um pipeline de difusão.
+	Paint over the area to fill	Pinte sobre a área a preencher
+	Press + (or Enter in the prompt) to make a variation, or OK to fill with one.	Pressione + (ou Enter no prompt) para criar uma variação, ou OK para preencher com uma delas.
+	Prompt	Prompt
+	Prompt, negative prompt and seed	Prompt, prompt negativo e semente
+	Prompt…	Prompt…
+	Random each time	Aleatória a cada vez
+	The same seed and prompt give the same result. Leave it empty for a new one each time.	A mesma semente e o mesmo prompt dão o mesmo resultado. Deixe vazio para uma nova a cada vez.
+	Variation {n} · seed {seed}	Variação {n} · semente {seed}
+	Variations	Variações
+	What to avoid, e.g. blurry, text	O que evitar, por ex. desfocado, texto

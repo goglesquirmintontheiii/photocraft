@@ -84,3 +84,34 @@ fn a_file_that_isnt_onnx_is_an_error() {
     assert!(infer::inpaint(&m, &img, &[1.0; 16], &mut go).is_err());
     let _ = std::fs::remove_file(p);
 }
+
+#[test]
+fn a_float16_inpainting_pipeline_runs_through_onnx_runtime() {
+    if !runtime() {
+        return;
+    }
+    use infer::diffusion::{Prompting, diffuse};
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/tiny_sd");
+    let files = [
+        "model_index.json",
+        "scheduler/scheduler_config.json",
+        "text_encoder/model.onnx",
+        "tokenizer/vocab.json",
+        "tokenizer/merges.txt",
+        "tokenizer/tokenizer_config.json",
+        "unet/model.onnx",
+        "vae_encoder/model.onnx",
+        "vae_decoder/model.onnx",
+    ];
+    let model = Model { name: "tiny".into(), files: files.iter().map(|f| dir.join(f)).collect(), catalog_id: None };
+    assert!(infer::diffusion::is_pipeline(&model));
+    let img = Image::new(70, 50, vec![0.6; 70 * 50 * 3]).unwrap();
+    let hole: Vec<f32> = (0..70 * 50).map(|i| if (20..50).contains(&(i % 70)) && (10..40).contains(&(i / 70)) { 1.0 } else { 0.0 }).collect();
+    let opts = Prompting { prompt: "a cat".into(), negative: "cat".into(), seed: Some(77), steps: 3, guidance: 7.5 };
+    let a = diffuse(&model, &img, &hole, &opts, &mut go).unwrap();
+    assert_eq!(a.rgb.len(), 70 * 50 * 3);
+    assert!(a.rgb.iter().all(|v| v.is_finite() && (0.0..=1.0).contains(v)));
+    assert_eq!(a.seed, 77);
+    let b = diffuse(&model, &img, &hole, &opts, &mut go).unwrap();
+    assert_eq!(a.rgb, b.rgb, "a seed gives the same picture");
+}

@@ -123,3 +123,112 @@ fn ai_object_selection_selects_what_the_model_finds_in_the_box() {
     assert!(selected(&s, 25, 40) < 0.1, "the bar isn't selected");
     assert!(selected(&s, 70, 2) < 0.1, "outside the box");
 }
+
+/// A models folder with the tiny Stable Diffusion pipeline fixture imported for Generative Fill.
+fn diffusion_models(tag: &str) -> Manager {
+    let dir = std::env::temp_dir().join(format!("photocraft-ai-tools-{tag}-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let m = Manager::open(&dir).unwrap();
+    m.import_folder(&fixture("tiny_sd"), &[ModelKind::Inpainting], Some(tag.into())).unwrap();
+    let start = std::time::Instant::now();
+    while m.any_active() {
+        assert!(start.elapsed().as_secs() < 20, "import took too long");
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    assert_eq!(m.installed().len(), 1, "{:?}", m.jobs());
+    m
+}
+
+fn layer_count(s: &Session) -> usize {
+    s.active().unwrap().doc.layers.len()
+}
+
+#[test]
+fn infill_and_generative_fill_need_a_model_and_say_so() {
+    let mut s = doc();
+    assert!(!s.is_enabled("paint.generativeInfill"));
+    s.set_models(Some(diffusion_models("sd-norun")));
+    assert!(s.is_enabled("paint.generativeInfill"));
+    assert!(!s.is_enabled("edit.generativeFill"), "needs a selection");
+    s.execute("select.rect", json!({"x": 50, "y": 20, "width": 30, "height": 30})).unwrap();
+    assert!(s.is_enabled("edit.generativeFill"));
+    for bad in [json!({"seed": "x"}), json!({"seed": 5_000_000_000u64}), json!({"steps": 0}), json!({"guidance": 99}), json!({"prompt": 3})] {
+        assert!(s.execute("edit.generativeFill", bad.clone()).is_err(), "{bad}");
+    }
+    if !photocraft_ml::infer::runtime_available() {
+        let e = s.execute("edit.generativeFill", json!({"prompt": "a cat"})).unwrap_err().to_string();
+        assert!(e.contains("runtime"), "{e}");
+    }
+}
+
+#[test]
+fn infill_fills_the_stroke_from_the_prompt_and_reports_the_seed() {
+    if !runtime() {
+        return;
+    }
+    let mut s = doc();
+    s.set_models(Some(diffusion_models("sd-infill")));
+    let before = px(&s, 70, 40);
+    let r = s.execute("paint.generativeInfill", json!({"points": [[70, 30], [70, 50]], "size": 16, "prompt": "a cat", "seed": 9, "steps": 2})).unwrap();
+    assert_eq!(r["seed"], 9, "{r}");
+    assert_ne!(px(&s, 70, 40), before, "the stroke was filled");
+    assert_eq!(px(&s, 95, 5), [1.0, 1.0, 1.0, 1.0], "outside the stroke, unchanged");
+    s.execute("edit.undo", json!({})).unwrap();
+    assert_eq!(px(&s, 70, 40), before);
+}
+
+#[test]
+fn generative_fill_variations_replace_each_other_and_cancel_or_keep() {
+    if !runtime() {
+        return;
+    }
+    let mut s = doc();
+    s.set_models(Some(diffusion_models("sd-fill")));
+    s.execute("select.rect", json!({"x": 50, "y": 20, "width": 30, "height": 30})).unwrap();
+    let layers = layer_count(&s);
+    let p = json!({"prompt": "a cat", "steps": 2, "preview": true});
+    let a = s.execute("edit.generativeFill", p.clone()).unwrap();
+    assert_eq!(a["variation"], 0, "{a}");
+    assert_eq!(layer_count(&s), layers + 1, "shown as a new layer");
+    let top = s.active().unwrap().active_layer.and_then(|id| s.active().unwrap().doc.layer(id)).unwrap().name.clone();
+    assert_eq!(top, "a cat");
+    let b = s.execute("edit.generativeFill", p.clone()).unwrap();
+    assert_eq!(b["variation"], 1);
+    assert_eq!(b["count"], 2);
+    assert_eq!(layer_count(&s), layers + 1, "the second replaced the first");
+    let v = s.execute("edit.generativeFill.variations", json!({})).unwrap();
+    assert_eq!(v["shown"], 1);
+    assert_eq!(v["variations"].as_array().unwrap().len(), 2);
+    let previews = s.generative_fill_previews();
+    assert_eq!(previews.len(), 2);
+    let (_, (tw, th, bytes)) = &previews[0];
+    assert_eq!(bytes.len(), tw * th * 4);
+    s.execute("edit.generativeFill.show", json!({"variation": 0})).unwrap();
+    assert_eq!(layer_count(&s), layers + 1);
+    // In the background, as the dialog runs it: the one shown is replaced when it lands.
+    let id = match s.start("edit.generativeFill", p.clone()).unwrap() {
+        photocraft_engine::jobs::Started::Job(id) => id,
+        photocraft_engine::jobs::Started::Done(v) => panic!("ran inline: {v}"),
+    };
+    let c = s.wait_job(id).unwrap();
+    assert_eq!(c["variation"], 2, "{c}");
+    assert_eq!(layer_count(&s), layers + 1);
+    assert_eq!(s.execute("edit.generativeFill.variations", json!({})).unwrap()["shown"], 2);
+    assert!(s.execute("edit.generativeFill.show", json!({"variation": 5})).is_err());
+    // Cancel takes it back.
+    assert_eq!(s.execute("edit.generativeFill.cancel", json!({})).unwrap()["undone"], true);
+    assert_eq!(layer_count(&s), layers);
+    assert!(s.generative_fill_previews().is_empty());
+    // OK keeps the one shown, as one step.
+    s.execute("edit.generativeFill", p).unwrap();
+    assert_eq!(s.execute("edit.generativeFill.commit", json!({})).unwrap()["kept"], 0);
+    assert_eq!(layer_count(&s), layers + 1);
+    s.execute("edit.undo", json!({})).unwrap();
+    assert_eq!(layer_count(&s), layers);
+    // Without the dialog it fills at once, on a layer named for the prompt.
+    let r = s.execute("edit.generativeFill", json!({"steps": 2, "seed": 4})).unwrap();
+    assert_eq!(r["seed"], 4);
+    assert_eq!(layer_count(&s), layers + 1);
+    let st = s.active().unwrap();
+    assert_eq!(st.active_layer.and_then(|id| st.doc.layer(id)).unwrap().name, "Generative Fill");
+}

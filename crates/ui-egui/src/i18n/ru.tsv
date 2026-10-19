@@ -3275,3 +3275,29 @@ curves	Smooth	Сгладить
 	Generative Removal Brush Tool	Кисть «Генеративное удаление»
 	Reflection Removal Brush Tool	Кисть «Удаление отражений»
 	API key	Ключ API
+
+# Generative Fill dialog and Infill brush
+	Generative Fill…	Генеративная заливка…
+	Infill Brush Tool	Кисть «Дорисовка»
+	A Stable Diffusion ONNX pipeline folder (model_index.json with unet, text_encoder, vae_encoder and vae_decoder folders)	Папка конвейера Stable Diffusion в формате ONNX (model_index.json с папками unet, text_encoder, vae_encoder и vae_decoder)
+	AI models run in the desktop app.	Модели ИИ работают в настольном приложении.
+	All three can be left empty. Paint over the area; it fills when you let go.	Все три поля можно оставить пустыми. Закрасьте область; она заполнится, когда вы отпустите кнопку.
+	Choose Folder…	Выбрать папку…
+	Ctrl+click to switch it in every section	Ctrl+щелчок переключает его во всех разделах
+	Describe what to put there, e.g. a cat sitting on the bench	Опишите, что там должно быть, например кошка, сидящая на скамейке
+	Generative Fill needs a model. Download one in Edit › Preferences › AI Models (Generative Fill & Infill).	Для генеративной заливки нужна модель. Скачайте её в разделе Редактирование › Настройки › Модели ИИ (Генеративная заливка и дорисовка).
+	Make a variation	Создать вариант
+	Negative prompt	Негативный запрос
+	New seed	Новое начальное значение
+	ONNX, safetensors, checkpoint or GGUF files (pick an ONNX model and its .data file together), or a diffusion pipeline's folder.	Файлы ONNX, safetensors, checkpoint или GGUF (модель ONNX выбирайте вместе с её файлом .data) или папка диффузионного конвейера.
+	Paint over the area to fill	Закрасьте область, которую нужно заполнить
+	Press + (or Enter in the prompt) to make a variation, or OK to fill with one.	Нажмите + (или Enter в поле запроса), чтобы создать вариант, или OK, чтобы залить одним из них.
+	Prompt	Запрос
+	Prompt, negative prompt and seed	Запрос, негативный запрос и начальное значение
+	Prompt…	Запрос…
+	Random each time	Каждый раз случайно
+	The same seed and prompt give the same result. Leave it empty for a new one each time.	Одинаковые начальное значение и запрос дают одинаковый результат. Оставьте поле пустым, чтобы каждый раз получать новое.
+	Variation {n} · seed {seed}	Вариант {n} · начальное значение {seed}
+	Variations	Варианты
+	What to avoid, e.g. blurry, text	Чего избегать, например размытость, текст
+	Seed	Начальное значение

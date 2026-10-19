@@ -14,12 +14,14 @@ pub enum Elem {
     F32,
     F16,
     I64,
+    I32,
     U8,
     Other,
 }
 
-/// A tensor's data. `F16` inputs take `F32` data (converted on the way in); outputs of any
-/// floating type come back as `F32`.
+/// A tensor's data. Inputs are converted to the type the network wants on the way in (`F32` data
+/// for `F16` inputs or integer timesteps, `I64` data for `I32` token ids …); outputs of any
+/// floating type come back as `F32`, of any integer type as `I64`.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Data {
     F32(Vec<f32>),
@@ -90,8 +92,8 @@ pub trait Loader: Send + Sync {
 }
 
 /// Loaded networks are kept: loading a 300 MB encoder takes seconds, and the tools run the same
-/// model again and again. A few at a time, the oldest dropped first.
-const KEEP: usize = 4;
+/// model again and again. A few at a time (a diffusion pipeline is four), the oldest dropped first.
+const KEEP: usize = 6;
 
 struct Cache {
     nets: Vec<(PathBuf, Arc<dyn Network>)>,
@@ -128,6 +130,11 @@ pub fn clear_cache() {
 /// Forgets the networks loaded from files under `dir` (a model's folder).
 pub fn forget(dir: &Path) {
     CACHE.lock().unwrap_or_else(PoisonError::into_inner).nets.retain(|(p, _)| !p.starts_with(dir));
+}
+
+/// Forgets the loaded networks whose file `drop` picks (another diffusion pipeline's parts).
+pub fn forget_where(drop: impl Fn(&Path) -> bool) {
+    CACHE.lock().unwrap_or_else(PoisonError::into_inner).nets.retain(|(p, _)| !drop(p));
 }
 
 /// The ONNX Runtime loader for this build.
@@ -208,6 +215,7 @@ mod ort_impl {
             TensorElementType::Float32 => Elem::F32,
             TensorElementType::Float16 => Elem::F16,
             TensorElementType::Int64 => Elem::I64,
+            TensorElementType::Int32 => Elem::I32,
             TensorElementType::Uint8 => Elem::U8,
             _ => Elem::Other,
         }
@@ -288,11 +296,17 @@ mod ort_impl {
 
     fn to_value(t: Tensor, want: Elem) -> ort::Result<DynValue> {
         let shape: Vec<usize> = t.shape.iter().map(|d| (*d).max(0) as usize).collect();
+        let f16 = |v: Vec<f32>| v.into_iter().map(half::f16::from_f32).collect::<Vec<_>>();
         Ok(match (t.data, want) {
-            (Data::F32(v), Elem::F16) => {
-                ort::value::Tensor::<half::f16>::from_array((shape, v.into_iter().map(half::f16::from_f32).collect::<Vec<_>>()))?.into_dyn()
-            }
+            (Data::F32(v), Elem::F16) => ort::value::Tensor::<half::f16>::from_array((shape, f16(v)))?.into_dyn(),
+            (Data::F32(v), Elem::I64) => ort::value::Tensor::<i64>::from_array((shape, v.into_iter().map(|x| x.round() as i64).collect::<Vec<_>>()))?.into_dyn(),
+            (Data::F32(v), Elem::I32) => ort::value::Tensor::<i32>::from_array((shape, v.into_iter().map(|x| x.round() as i32).collect::<Vec<_>>()))?.into_dyn(),
             (Data::F32(v), _) => ort::value::Tensor::<f32>::from_array((shape, v))?.into_dyn(),
+            (Data::I64(v), Elem::I32) => {
+                ort::value::Tensor::<i32>::from_array((shape, v.into_iter().map(|x| x.clamp(i64::from(i32::MIN), i64::from(i32::MAX)) as i32).collect::<Vec<_>>()))?.into_dyn()
+            }
+            (Data::I64(v), Elem::F32) => ort::value::Tensor::<f32>::from_array((shape, v.into_iter().map(|x| x as f32).collect::<Vec<_>>()))?.into_dyn(),
+            (Data::I64(v), Elem::F16) => ort::value::Tensor::<half::f16>::from_array((shape, f16(v.into_iter().map(|x| x as f32).collect())))?.into_dyn(),
             (Data::I64(v), _) => ort::value::Tensor::<i64>::from_array((shape, v))?.into_dyn(),
             (Data::U8(v), _) => ort::value::Tensor::<u8>::from_array((shape, v))?.into_dyn(),
         })
@@ -310,6 +324,9 @@ mod ort_impl {
         }
         if let Ok((s, d)) = v.try_extract_tensor::<i64>() {
             return Some(Tensor::i64(s, d.to_vec()));
+        }
+        if let Ok((s, d)) = v.try_extract_tensor::<i32>() {
+            return Some(Tensor::i64(s, d.iter().map(|x| i64::from(*x)).collect()));
         }
         None
     }

@@ -1,10 +1,12 @@
-//! The AI tools in the shell: AI Object Selection and the Generative Brushes (Generative
-//! Removal, Reflection Removal).
+//! The AI tools in the shell: AI Object Selection and the Generative Brushes (Infill,
+//! Generative Removal, Reflection Removal).
 //!
 //! - Gestures: AI Object Selection drags a box or clicks, like Object Selection; a Generative
 //!   Brush paints like the Remove Tool and runs its model when the stroke ends.
 //! - Options bar: the model menu (installed models enabled for that use, best first; "Get
 //!   Models…" opens Edit › Preferences › AI Models when there are none) and the tool's options.
+//!   Infill's Prompt button opens a menu below it with the prompt, negative prompt and seed (all
+//!   may be left empty).
 //! - While a brush's model runs, what it is filling stays tinted on the canvas until the result
 //!   lands (progress, time taken and time left are in the status bar and progress window).
 
@@ -26,6 +28,7 @@ pub(crate) struct Pending {
 pub fn kind_of(tool: Tool) -> Option<ModelKind> {
     match tool {
         Tool::AiObjectSelection => Some(ModelKind::Segmentation),
+        Tool::GenerativeInfill => Some(ModelKind::Inpainting),
         Tool::GenerativeRemoval => Some(ModelKind::Removal),
         Tool::ReflectionRemoval => Some(ModelKind::Reflection),
         _ => None,
@@ -36,6 +39,7 @@ fn chosen_model(app: &mut PhotocraftApp, tool: Tool) -> Option<&mut String> {
     let o = &mut app.ui.tool_options;
     match tool {
         Tool::AiObjectSelection => Some(&mut o.ai_select_model),
+        Tool::GenerativeInfill => Some(&mut o.infill_model),
         Tool::GenerativeRemoval => Some(&mut o.gen_removal_model),
         Tool::ReflectionRemoval => Some(&mut o.reflection_model),
         _ => None,
@@ -103,6 +107,7 @@ pub fn finish_ai_object_selection(app: &mut PhotocraftApp, start: [f64; 2], end:
 /// A Generative Brush stroke ended: fill it with the brush's model. Returns false for other tools.
 pub fn finish_stroke(app: &mut PhotocraftApp, tool: Tool, points: &[[f64; 3]]) -> bool {
     let cmd = match tool {
+        Tool::GenerativeInfill => "paint.generativeInfill",
         Tool::GenerativeRemoval => "paint.generativeRemoval",
         Tool::ReflectionRemoval => "paint.reflectionRemoval",
         _ => return false,
@@ -115,6 +120,12 @@ pub fn finish_stroke(app: &mut PhotocraftApp, tool: Tool, points: &[[f64; 3]]) -
     let mut p = json!({"points": points, "sampleAllLayers": o.sample_all_layers, "newLayer": o.gen_new_layer});
     p["model"] = model_param(app, tool);
     p["target"] = crate::canvas::paint_target(app);
+    if tool == Tool::GenerativeInfill {
+        let o = &app.ui.tool_options;
+        p["prompt"] = json!(o.infill_prompt);
+        p["negativePrompt"] = json!(o.infill_negative);
+        p["seed"] = parse_seed(&o.infill_seed).map_or(Value::Null, |s| json!(s));
+    }
     let trail = app.trail.take();
     match app.run(cmd, p) {
         Ok(r) => {
@@ -128,6 +139,73 @@ pub fn finish_stroke(app: &mut PhotocraftApp, tool: Tool, points: &[[f64; 3]]) -
         }
     }
     true
+}
+
+/// A typed seed: a whole number up to the largest seed, or none (a new one each time).
+pub(crate) fn parse_seed(text: &str) -> Option<u64> {
+    text.trim().parse::<u64>().ok().filter(|s| *s <= photocraft_ml::infer::diffusion::MAX_SEED)
+}
+
+/// The prompt, negative prompt and seed fields (the Infill menu and Generative Fill's dialog).
+/// Returns true when Enter was pressed in the prompt.
+pub(crate) fn prompt_fields(ui: &mut egui::Ui, id: &str, prompt: &mut String, negative: &mut String, seed: &mut String, width: f32) -> bool {
+    let t = Tokens::get(ui.ctx());
+    let label = |ui: &mut egui::Ui, text: &str| ui.label(egui::RichText::new(text).color(t.text_dim).size(12.0));
+    label(ui, tl!("Prompt"));
+    let r = ui.add(
+        egui::TextEdit::multiline(prompt)
+            .id_salt((id, "prompt"))
+            .hint_text(tl!("Describe what to put there, e.g. a cat sitting on the bench"))
+            .desired_rows(3)
+            .desired_width(width),
+    );
+    // Enter generates; ⇧Enter is a new line.
+    let enter = r.has_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter) && !i.modifiers.shift);
+    if enter && prompt.ends_with('\n') {
+        prompt.pop();
+    }
+    ui.add_space(4.0);
+    label(ui, tl!("Negative prompt"));
+    ui.add(egui::TextEdit::multiline(negative).id_salt((id, "negative")).hint_text(tl!("What to avoid, e.g. blurry, text")).desired_rows(2).desired_width(width));
+    ui.add_space(4.0);
+    label(ui, tl!("Seed"));
+    ui.horizontal(|ui| {
+        let bad = !seed.trim().is_empty() && parse_seed(seed).is_none();
+        let mut edit = egui::TextEdit::singleline(seed).id_salt((id, "seed")).hint_text(tl!("Random")).desired_width(width - 64.0);
+        if bad {
+            edit = edit.text_color(t.danger);
+        }
+        ui.add(edit).on_hover_text(tl!("The same seed and prompt give the same result. Leave it empty for a new one each time."));
+        if crate::icons::button(ui, "rotate-cw", 22.0, false, tl!("New seed")).clicked() {
+            *seed = photocraft_ml::infer::diffusion::new_seed().to_string();
+        }
+        if crate::icons::button(ui, "x", 22.0, false, tl!("Random each time")).clicked() {
+            seed.clear();
+        }
+    });
+    enter
+}
+
+/// Infill's Prompt button: shows the prompt (or "Prompt…") and opens its menu below.
+fn prompt_button(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+    let o = &mut app.ui.tool_options;
+    let summary: String = o.infill_prompt.trim().chars().take(28).collect();
+    let text = if summary.is_empty() {
+        tl!("Prompt…").to_string()
+    } else if summary.chars().count() < o.infill_prompt.trim().chars().count() {
+        format!("{summary}…")
+    } else {
+        summary
+    };
+    let resp = crate::widgets::secondary_button(ui, &text, 0.0).on_hover_text(tl!("Prompt, negative prompt and seed"));
+    egui::Popup::from_toggle_button_response(&resp).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside).show(|ui| {
+        ui.set_width(300.0);
+        if prompt_fields(ui, "infill", &mut o.infill_prompt, &mut o.infill_negative, &mut o.infill_seed, 300.0) {
+            egui::Popup::close_all(ui.ctx());
+        }
+        ui.add_space(4.0);
+        ui.label(egui::RichText::new(tl!("All three can be left empty. Paint over the area; it fills when you let go.")).color(Tokens::get(ui.ctx()).text_dim).size(11.5));
+    });
 }
 
 /// Keeps the tint of a stroke being filled on the canvas until its job lands.
@@ -180,6 +258,10 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) -> bo
     if kind_of(tool).is_none() {
         return false;
     }
+    if tool == Tool::GenerativeInfill {
+        prompt_button(app, ui);
+        crate::widgets::vline(ui, 22.0);
+    }
     model_menu(app, ui, tool);
     crate::widgets::vline(ui, 22.0);
     let t = Tokens::get(ui.ctx());
@@ -190,6 +272,10 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) -> bo
         Tool::GenerativeRemoval => {
             crate::widgets::checkbox(ui, &mut o.gen_new_layer, tl!("Create a new layer"));
             tl!("Paint over what to remove")
+        }
+        Tool::GenerativeInfill => {
+            crate::widgets::checkbox(ui, &mut o.gen_new_layer, tl!("Create a new layer"));
+            tl!("Paint over the area to fill")
         }
         _ => {
             crate::widgets::checkbox(ui, &mut o.gen_new_layer, tl!("Create a new layer"));
@@ -218,6 +304,12 @@ mod tests {
         assert_eq!(kind_of(Tool::AiObjectSelection), Some(ModelKind::Segmentation));
         assert_eq!(kind_of(Tool::GenerativeRemoval), Some(ModelKind::Removal));
         assert_eq!(kind_of(Tool::ReflectionRemoval), Some(ModelKind::Reflection));
+        assert_eq!(kind_of(Tool::GenerativeInfill), Some(ModelKind::Inpainting));
+        assert!(Tool::GenerativeInfill.is_brushlike());
+        assert_eq!(parse_seed(" 42 "), Some(42));
+        assert_eq!(parse_seed(""), None);
+        assert_eq!(parse_seed("-3"), None);
+        assert_eq!(parse_seed("99999999999"), None);
         assert_eq!(kind_of(Tool::Brush), None);
         assert!(Tool::GenerativeRemoval.is_brushlike() && Tool::ReflectionRemoval.is_brushlike());
         assert!(!Tool::AiObjectSelection.is_brushlike());

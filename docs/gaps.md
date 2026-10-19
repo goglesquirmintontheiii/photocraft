@@ -141,8 +141,13 @@ what an agent can't finish alone.
   and an optional ONNX Runtime (`photocraft-ml` features `onnx` / `onnx-dynamic`, GPU through
   DirectML or WebGPU with CPU fallback). It drives AI Object Selection (SAM 2.1, MobileSAM,
   matting models) and the Generative Brushes: Generative Removal and Reflection Removal (LaMa,
-  MI-GAN, or an image-to-image model). Default builds have no runtime; the tools say so.
-- **Missing:** prompted Generative Fill and Expand (diffusion), Generative Upscale, Neural
+  MI-GAN, or an image-to-image model such as a DINOv3 reflection remover). Prompted fills
+  (Infill brush, Edit › Generative Fill with a variations list) run Stable Diffusion 1.5/2
+  inpainting pipelines exported to ONNX (CLIP tokenizer, DDIM, classifier-free guidance);
+  ordinary 4-channel pipelines inpaint by keeping the unmasked latents. Default builds have no
+  runtime; the tools say so.
+- **Missing:** SDXL and single-file checkpoint (.safetensors) pipelines, Generative Expand,
+  Generative Upscale, Neural
   Filters, Sky Replacement, Super Zoom, ML Select Subject/Sky. Classical substitutes exist
   (GrabCut/max-flow selection, Remove tool by non-local patch completion).
 - **Evidence:** Photoshop's `Required/UXP` ships the Neural Filters gallery and its `.kys` has

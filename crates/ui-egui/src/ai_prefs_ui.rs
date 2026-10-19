@@ -221,12 +221,16 @@ fn installed_row(ui: &mut Ui, model: &InstalledModel, kind: ModelKind, st: &mut 
         ui.label(RichText::new(format_size(model.size_bytes)).size(11.5).color(t.text_dim).monospace());
         ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
             let (rect, resp) = ui.allocate_exact_size(vec2(14.0, 14.0), Sense::click());
-            let resp = resp.on_hover_text(if enabled { tl!("Enabled: tools can use this model") } else { tl!("Disabled: no tool offers this model") });
+            let tip = if enabled { tl!("Enabled: tools can use this model") } else { tl!("Disabled: no tool offers this model") };
+            let resp = resp.on_hover_text(format!("{tip}\n{}", tl!("Ctrl+click to switch it in every section")));
             crate::widgets::check_box(ui.painter(), rect, enabled, resp.hovered(), resp.is_pointer_button_down_on(), &t);
-            if resp.clicked()
-                && let Err(e) = m.set_enabled(&model.id, kind, !enabled)
-            {
-                *error = Some(e.to_string());
+            if resp.clicked() {
+                // Ctrl (⌘ on macOS) switches every section the model is in to this one's new state.
+                let everywhere = ui.input(|i| i.modifiers.command);
+                let r = if everywhere { m.set_enabled_everywhere(&model.id, !enabled) } else { m.set_enabled(&model.id, kind, !enabled) };
+                if let Err(e) = r {
+                    *error = Some(e.to_string());
+                }
             }
             let w = ui.available_width();
             if renaming {
@@ -411,8 +415,18 @@ fn import_panel(ui: &mut Ui, st: &mut Map<String, Value>, m: &Manager, error: &m
                 if crate::widgets::primary_button(ui, tl!("Choose Files…"), 110.0).clicked() {
                     st.insert(PICK_FILES.into(), json!({"kinds": kinds.iter().map(|k| k.id()).collect::<Vec<_>>(), "auto": auto, "name": name}));
                 }
+                if crate::widgets::secondary_button(ui, tl!("Choose Folder…"), 110.0)
+                    .on_hover_text(tl!("A Stable Diffusion ONNX pipeline folder (model_index.json with unet, text_encoder, vae_encoder and vae_decoder folders)"))
+                    .clicked()
+                {
+                    st.insert(PICK_FILES.into(), json!({"kinds": kinds.iter().map(|k| k.id()).collect::<Vec<_>>(), "auto": auto, "name": name, "folder": true}));
+                }
+            });
+            ui.horizontal(|ui| {
                 ui.label(
-                    RichText::new(tl!("ONNX, safetensors, checkpoint or GGUF. Pick an ONNX model and its .data file together.")).size(11.0).color(t.text_faint),
+                    RichText::new(tl!("ONNX, safetensors, checkpoint or GGUF files (pick an ONNX model and its .data file together), or a diffusion pipeline's folder."))
+                        .size(11.0)
+                        .color(t.text_faint),
                 );
             });
         }

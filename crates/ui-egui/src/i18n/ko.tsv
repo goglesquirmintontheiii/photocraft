@@ -3484,3 +3484,29 @@ curves	Smooth	매끄럽게
 	Generative Removal Brush Tool	생성형 제거 브러시
 	Reflection Removal Brush Tool	반사 제거 브러시
 	API key	API 키
+
+# Generative Fill dialog and Infill brush
+	Generative Fill…	생성형 채우기…
+	Infill Brush Tool	인필 브러시
+	A Stable Diffusion ONNX pipeline folder (model_index.json with unet, text_encoder, vae_encoder and vae_decoder folders)	Stable Diffusion ONNX 파이프라인 폴더(model_index.json과 unet, text_encoder, vae_encoder, vae_decoder 폴더)
+	AI models run in the desktop app.	AI 모델은 데스크톱 앱에서 실행됩니다.
+	All three can be left empty. Paint over the area; it fills when you let go.	세 항목 모두 비워 두어도 됩니다. 영역 위에 칠하면 버튼을 놓을 때 채워집니다.
+	Choose Folder…	폴더 선택…
+	Ctrl+click to switch it in every section	Ctrl+클릭하면 모든 섹션에서 전환됩니다
+	Describe what to put there, e.g. a cat sitting on the bench	그 자리에 넣을 것을 설명하세요. 예: 벤치에 앉아 있는 고양이
+	Generative Fill needs a model. Download one in Edit › Preferences › AI Models (Generative Fill & Infill).	생성형 채우기에는 모델이 필요합니다. 편집 › 환경 설정 › AI 모델(생성형 채우기 및 인필)에서 다운로드하세요.
+	Make a variation	변형 만들기
+	Negative prompt	네거티브 프롬프트
+	New seed	새 난수 시드
+	ONNX, safetensors, checkpoint or GGUF files (pick an ONNX model and its .data file together), or a diffusion pipeline's folder.	ONNX, safetensors, 체크포인트 또는 GGUF 파일(ONNX 모델은 .data 파일과 함께 선택) 또는 확산 파이프라인 폴더.
+	Paint over the area to fill	채울 영역 위에 칠하세요
+	Press + (or Enter in the prompt) to make a variation, or OK to fill with one.	+(또는 프롬프트에서 Enter)를 누르면 변형을 만들고, 확인을 누르면 그중 하나로 채웁니다.
+	Prompt	프롬프트
+	Prompt, negative prompt and seed	프롬프트, 네거티브 프롬프트 및 난수 시드
+	Prompt…	프롬프트…
+	Random each time	매번 임의
+	The same seed and prompt give the same result. Leave it empty for a new one each time.	같은 난수 시드와 프롬프트는 같은 결과를 냅니다. 매번 새 시드를 쓰려면 비워 두세요.
+	Variation {n} · seed {seed}	변형 {n} · 시드 {seed}
+	Variations	변형
+	What to avoid, e.g. blurry, text	피할 것, 예: 흐림, 텍스트
+	Stop	중지

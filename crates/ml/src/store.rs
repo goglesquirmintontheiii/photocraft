@@ -208,7 +208,7 @@ impl Store {
         let mut store = Store { dir: dir.to_path_buf(), models: Vec::new(), warning };
         let mut seen = std::collections::HashSet::new();
         for mut m in manifest.models {
-            if !valid_id(&m.id) || !seen.insert(m.id.clone()) || m.files.iter().any(|f| !valid_file_name(f)) {
+            if !valid_id(&m.id) || !seen.insert(m.id.clone()) || m.files.iter().any(|f| !valid_model_path(f)) {
                 log::warn!("ignoring model entry {:?}: bad id or file name", m.id);
                 continue;
             }
@@ -404,6 +404,13 @@ pub fn valid_id(id: &str) -> bool {
 /// A file name inside a model folder: no separators, no `..`, nothing hidden, no NULs.
 pub fn valid_file_name(name: &str) -> bool {
     !name.is_empty() && name.len() <= 200 && !name.starts_with('.') && !name.contains(['/', '\\', '\0', ':']) && name.chars().all(|c| !c.is_control())
+}
+
+/// A file inside a model folder, possibly in a subfolder of it ("unet/model.onnx", as diffusion
+/// pipelines are laid out): one to three valid names joined by `/`.
+pub fn valid_model_path(path: &str) -> bool {
+    let parts: Vec<&str> = path.split('/').collect();
+    (1..=3).contains(&parts.len()) && parts.iter().all(|p| valid_file_name(p))
 }
 
 /// Turns any text into a usable file name: separators and odd characters become `_`.
@@ -608,6 +615,10 @@ mod tests {
         assert!(valid_file_name("lama_fp32.onnx"));
         assert!(!valid_file_name("../x"));
         assert!(!valid_file_name(".hidden"));
+        assert!(valid_model_path("unet/model.onnx") && valid_model_path("lama_fp32.onnx"));
+        for bad in ["../x", "unet/../x", "/abs", "a//b", "a/b/c/d", "unet/.hidden", "a\\b"] {
+            assert!(!valid_model_path(bad), "{bad}");
+        }
         let _ = std::fs::remove_dir_all(dir);
     }
 }

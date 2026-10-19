@@ -147,6 +147,7 @@ pub const TOOLS: &[(&str, &str, Option<&str>)] = &[
     ("tools.select.quickSelection", "Quick Selection Tool", Some("W")),
     ("tools.select.objectSelection", "Object Selection Tool", Some("W")),
     ("tools.select.aiObjectSelection", "AI Object Selection Tool", Some("W")),
+    ("tools.select.generativeInfill", "Infill Brush Tool", None),
     ("tools.select.generativeRemoval", "Generative Removal Brush Tool", None),
     ("tools.select.reflectionRemoval", "Reflection Removal Brush Tool", None),
     ("tools.select.pen", "Pen Tool", Some("P")),

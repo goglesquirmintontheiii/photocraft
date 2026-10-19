@@ -99,10 +99,14 @@ pub fn detect(text: &str) -> Vec<ModelKind> {
         || has("flux")
         || has("kandinsky")
         || starts("sd") && (has("inpaint") || has("v1") || has("xl") || word("sd2") || word("sd15"));
+    let removal = has("lama") || has("migan") || has("mi-gan") || has("mi_gan") || word("mat") || word("zits");
     if diffusion {
         out.push(ModelKind::Inpainting);
-    } else if has("lama") || has("migan") || has("mi-gan") || has("mi_gan") || has("inpaint") || has("big-lama") || word("mat") || word("zits") {
+    } else if removal {
         out.extend([ModelKind::Removal, ModelKind::Reflection]);
+    } else if has("inpaint") {
+        // Any other inpainting model is a prompted (diffusion) one these days.
+        out.push(ModelKind::Inpainting);
     }
     let mut seen = Vec::new();
     out.retain(|k| {
@@ -133,6 +137,8 @@ mod tests {
         assert_eq!(detect("https://civitai.com/models/1234/epicrealism-inpainting sdxl"), vec![Inpainting]);
         assert_eq!(detect("runwayml/stable-diffusion-inpainting"), vec![Inpainting]);
         assert_eq!(detect("someone/dsrnet-reflection"), vec![Reflection]);
+        assert_eq!(detect("RanaLLC/Realistic_Vision_V5.1-inpainting-onnx-fp16"), vec![Inpainting]);
+        assert_eq!(detect("https://github.com/PINTO0309/reflection-removal"), vec![Reflection]);
         assert!(detect("sample-model.onnx").is_empty());
         assert!(detect("").is_empty());
         assert!(detect("https://example.com/weights.bin").is_empty());

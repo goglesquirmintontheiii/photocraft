@@ -119,7 +119,8 @@ pub enum Tool {
     /// Object Selection with a local AI model (Edit › Preferences › AI Models).
     AiObjectSelection,
     /// The Generative Brushes (one toolbar button, a box of brushes beside it): a local AI
-    /// model fills what the stroke covers when it ends.
+    /// model fills what the stroke covers when it ends. Infill fills it from a prompt.
+    GenerativeInfill,
     GenerativeRemoval,
     ReflectionRemoval,
     Pen,
@@ -144,7 +145,7 @@ pub enum Tool {
 }
 
 impl Tool {
-    pub const ALL: [Tool; 70] = [
+    pub const ALL: [Tool; 71] = [
         Tool::Move,
         Tool::Artboard,
         Tool::RectMarquee,
@@ -196,6 +197,7 @@ impl Tool {
         Tool::QuickSelection,
         Tool::ObjectSelection,
         Tool::AiObjectSelection,
+        Tool::GenerativeInfill,
         Tool::GenerativeRemoval,
         Tool::ReflectionRemoval,
         Tool::Pen,
@@ -273,6 +275,7 @@ impl Tool {
             Tool::QuickSelection => "Quick Selection Tool",
             Tool::ObjectSelection => "Object Selection Tool",
             Tool::AiObjectSelection => "AI Object Selection Tool",
+            Tool::GenerativeInfill => "Infill Brush Tool",
             Tool::GenerativeRemoval => "Generative Removal Brush Tool",
             Tool::ReflectionRemoval => "Reflection Removal Brush Tool",
             Tool::Pen => "Pen Tool",
@@ -314,6 +317,7 @@ impl Tool {
                 | Tool::Eraser
                 | Tool::BackgroundEraser
                 | Tool::Remove
+                | Tool::GenerativeInfill
                 | Tool::GenerativeRemoval
                 | Tool::ReflectionRemoval
                 | Tool::SpotHealing
@@ -355,7 +359,7 @@ impl Tool {
             Tool::Dodge | Tool::Burn | Tool::Sponge => 'O',
             Tool::QuickSelection | Tool::ObjectSelection | Tool::AiObjectSelection => 'W',
             // Chosen from the Generative Brush box.
-            Tool::GenerativeRemoval | Tool::ReflectionRemoval => '\0',
+            Tool::GenerativeInfill | Tool::GenerativeRemoval | Tool::ReflectionRemoval => '\0',
             Tool::Pen | Tool::FreeformPen | Tool::CurvaturePen | Tool::AddAnchorPoint | Tool::DeleteAnchorPoint | Tool::ConvertPoint => 'P',
             Tool::PathSelection | Tool::DirectSelection => 'A',
             Tool::Rectangle | Tool::EllipseShape | Tool::Triangle | Tool::Polygon | Tool::Line | Tool::CustomShape => 'U',
@@ -547,6 +551,12 @@ pub struct ToolOptions {
     /// The Generative Brushes: the fill goes to a new layer above the target.
     #[serde(default)]
     pub gen_new_layer: bool,
+    /// Infill brush: its model (empty = the best one enabled), prompt, negative prompt and seed
+    /// (empty = a new one each time).
+    pub infill_model: String,
+    pub infill_prompt: String,
+    pub infill_negative: String,
+    pub infill_seed: String,
     pub feather: f32,
     /// linear | radial | angle | reflected | diamond
     pub gradient_style: String,
@@ -803,6 +813,10 @@ impl Default for ToolOptions {
             gen_removal_model: String::new(),
             reflection_model: String::new(),
             gen_new_layer: false,
+            infill_model: String::new(),
+            infill_prompt: String::new(),
+            infill_negative: String::new(),
+            infill_seed: String::new(),
             feather: 0.0,
             gradient_style: "linear".into(),
             gradient_reverse: false,
@@ -1492,9 +1506,11 @@ mod tests {
         assert!(!Tool::RedEye.is_brushlike());
         assert_eq!(Tool::from_name("patternStamp"), Some(Tool::PatternStamp));
         assert_eq!(Tool::from_name("Pattern Stamp Tool"), Some(Tool::PatternStamp));
-        assert_eq!(Tool::ALL.len(), 70);
+        assert_eq!(Tool::ALL.len(), 71);
         assert_eq!(Tool::from_name("AI Object Selection Tool"), Some(Tool::AiObjectSelection));
         assert_eq!(Tool::from_name("generativeRemoval"), Some(Tool::GenerativeRemoval));
+        assert_eq!(Tool::from_name("generativeInfill"), Some(Tool::GenerativeInfill));
+        assert_eq!(Tool::GenerativeInfill.key(), '\0');
         assert_eq!(Tool::ReflectionRemoval.key(), '\0', "picked from the Generative Brush box");
         assert_eq!(Tool::from_name("Vertical Type Mask Tool"), Some(Tool::VerticalTypeMask));
         assert_eq!(Tool::from_name("addAnchorPoint"), Some(Tool::AddAnchorPoint));

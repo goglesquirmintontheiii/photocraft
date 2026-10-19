@@ -3979,3 +3979,28 @@ curves	Smooth	スムーズ
 	Generative Removal Brush Tool	生成削除ブラシ
 	Reflection Removal Brush Tool	映り込み除去ブラシ
 	API key	API キー
+
+# Generative Fill dialog and Infill brush
+	Generative Fill…	生成塗りつぶし…
+	Infill Brush Tool	インフィルブラシ
+	A Stable Diffusion ONNX pipeline folder (model_index.json with unet, text_encoder, vae_encoder and vae_decoder folders)	Stable Diffusion の ONNX パイプラインフォルダー (model_index.json と unet、text_encoder、vae_encoder、vae_decoder フォルダー)
+	AI models run in the desktop app.	AI モデルはデスクトップアプリで実行されます。
+	All three can be left empty. Paint over the area; it fills when you let go.	3 つとも空欄のままでかまいません。領域をペイントすると、ボタンを離したときに塗りつぶされます。
+	Choose Folder…	フォルダーを選択…
+	Ctrl+click to switch it in every section	Ctrl+クリックですべてのセクションで切り替え
+	Describe what to put there, e.g. a cat sitting on the bench	配置するものを説明してください (例: ベンチに座っている猫)
+	Generative Fill needs a model. Download one in Edit › Preferences › AI Models (Generative Fill & Infill).	生成塗りつぶしにはモデルが必要です。編集 › 環境設定 › AI モデル (生成塗りつぶしとインフィル) でダウンロードしてください。
+	Make a variation	バリエーションを作成
+	Negative prompt	ネガティブプロンプト
+	New seed	新しいシード
+	ONNX, safetensors, checkpoint or GGUF files (pick an ONNX model and its .data file together), or a diffusion pipeline's folder.	ONNX、safetensors、チェックポイント、GGUF ファイル (ONNX モデルは .data ファイルと一緒に選択)、または拡散パイプラインのフォルダー。
+	Paint over the area to fill	塗りつぶす領域をペイント
+	Press + (or Enter in the prompt) to make a variation, or OK to fill with one.	+ (またはプロンプトで Enter) でバリエーションを作成し、OK でそのいずれかで塗りつぶします。
+	Prompt	プロンプト
+	Prompt, negative prompt and seed	プロンプト、ネガティブプロンプト、シード
+	Prompt…	プロンプト…
+	Random each time	毎回ランダム
+	The same seed and prompt give the same result. Leave it empty for a new one each time.	同じシードとプロンプトからは同じ結果が得られます。毎回新しいシードにするには空欄のままにします。
+	Variation {n} · seed {seed}	バリエーション {n} · シード {seed}
+	Variations	バリエーション
+	What to avoid, e.g. blurry, text	避けたいもの (例: ぼやけ、テキスト)

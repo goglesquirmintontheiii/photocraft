@@ -2911,3 +2911,30 @@ curves	Smooth	平滑
 	Generative Removal Brush Tool	生成式移除筆刷
 	Reflection Removal Brush Tool	反光移除筆刷
 	API key	API 金鑰
+
+# Generative Fill dialog and Infill brush
+	Generative Fill…	生成式填色…
+	Infill Brush Tool	補全筆刷
+	A Stable Diffusion ONNX pipeline folder (model_index.json with unet, text_encoder, vae_encoder and vae_decoder folders)	Stable Diffusion ONNX 管線資料夾（model_index.json 以及 unet、text_encoder、vae_encoder 和 vae_decoder 資料夾）
+	AI models run in the desktop app.	AI 模型在桌面應用程式中執行。
+	All three can be left empty. Paint over the area; it fills when you let go.	三項都可以留空。在區域上塗抹，放開後即會填色。
+	Choose Folder…	選擇資料夾…
+	Ctrl+click to switch it in every section	按住 Ctrl 按一下可在所有區段中切換
+	Describe what to put there, e.g. a cat sitting on the bench	描述要放在那裡的內容，例如：一隻坐在長椅上的貓
+	Generative Fill needs a model. Download one in Edit › Preferences › AI Models (Generative Fill & Infill).	生成式填色需要模型。請在 編輯 › 偏好設定 › AI 模型（生成式填色與補全）中下載。
+	Make a variation	產生變體
+	Negative prompt	反向提示詞
+	New seed	新種子
+	ONNX, safetensors, checkpoint or GGUF files (pick an ONNX model and its .data file together), or a diffusion pipeline's folder.	ONNX、safetensors、checkpoint 或 GGUF 檔案（請將 ONNX 模型與其 .data 檔案一起選取），或擴散管線的資料夾。
+	Paint over the area to fill	塗抹要填色的區域
+	Press + (or Enter in the prompt) to make a variation, or OK to fill with one.	按 +（或在提示詞中按 Enter）產生變體，按「確定」以其中一個填色。
+	Prompt	提示詞
+	Prompt, negative prompt and seed	提示詞、反向提示詞和種子
+	Prompt…	提示詞…
+	Random each time	每次隨機
+	The same seed and prompt give the same result. Leave it empty for a new one each time.	相同的種子和提示詞會產生相同的結果。留空則每次使用新種子。
+	Variation {n} · seed {seed}	變體 {n} · 種子 {seed}
+	Variations	變體
+	What to avoid, e.g. blurry, text	要避免的內容，例如：模糊、文字
+	Seed	種子
+	Stop	停止

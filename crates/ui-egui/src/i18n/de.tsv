@@ -3303,3 +3303,29 @@ curves	Smooth	Glätten
 	Generative Removal Brush Tool	Pinsel „Generatives Entfernen“
 	Reflection Removal Brush Tool	Pinsel „Spiegelungen entfernen“
 	API key	API-Schlüssel
+
+# Generative Fill dialog and Infill brush
+	Generative Fill…	Generatives Füllen…
+	Infill Brush Tool	Pinsel „Infill“
+	A Stable Diffusion ONNX pipeline folder (model_index.json with unet, text_encoder, vae_encoder and vae_decoder folders)	Ein Stable-Diffusion-ONNX-Pipeline-Ordner (model_index.json mit den Ordnern unet, text_encoder, vae_encoder und vae_decoder)
+	AI models run in the desktop app.	KI-Modelle laufen in der Desktop-App.
+	All three can be left empty. Paint over the area; it fills when you let go.	Alle drei Felder dürfen leer bleiben. Malen Sie über den Bereich; er wird beim Loslassen gefüllt.
+	Choose Folder…	Ordner wählen…
+	Ctrl+click to switch it in every section	Ctrl+Klick schaltet es in jedem Abschnitt um
+	Describe what to put there, e.g. a cat sitting on the bench	Beschreiben Sie, was dorthin soll, z. B. eine Katze, die auf der Bank sitzt
+	Generative Fill needs a model. Download one in Edit › Preferences › AI Models (Generative Fill & Infill).	Generatives Füllen braucht ein Modell. Laden Sie eines unter Bearbeiten › Voreinstellungen › KI-Modelle (Generatives Füllen & Infill) herunter.
+	Make a variation	Variante erstellen
+	Negative prompt	Negativer Prompt
+	New seed	Neuer Startwert
+	ONNX, safetensors, checkpoint or GGUF files (pick an ONNX model and its .data file together), or a diffusion pipeline's folder.	ONNX-, safetensors-, Checkpoint- oder GGUF-Dateien (ein ONNX-Modell zusammen mit seiner .data-Datei wählen) oder der Ordner einer Diffusions-Pipeline.
+	Paint over the area to fill	Über den zu füllenden Bereich malen
+	Press + (or Enter in the prompt) to make a variation, or OK to fill with one.	Drücken Sie + (oder Enter im Prompt), um eine Variante zu erstellen, oder OK, um mit einer zu füllen.
+	Prompt	Prompt
+	Prompt, negative prompt and seed	Prompt, negativer Prompt und Startwert
+	Prompt…	Prompt…
+	Random each time	Jedes Mal zufällig
+	The same seed and prompt give the same result. Leave it empty for a new one each time.	Gleicher Startwert und Prompt ergeben dasselbe Ergebnis. Leer lassen, um jedes Mal einen neuen zu erhalten.
+	Variation {n} · seed {seed}	Variante {n} · Startwert {seed}
+	Variations	Varianten
+	What to avoid, e.g. blurry, text	Was vermieden werden soll, z. B. unscharf, Text
+	Stop	Anhalten
