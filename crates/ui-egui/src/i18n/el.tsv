@@ -4041,3 +4041,16 @@ curves	Smooth	Εξομάλυνση
 	Variation {n} · seed {seed}	Παραλλαγή {n} · αρχική τιμή {seed}
 	Variations	Παραλλαγές
 	What to avoid, e.g. blurry, text	Τι να αποφευχθεί, π.χ. θολό, κείμενο
+
+# Generative Sharpen, Object Selection Brush, AI model device
+	Generative Sharpen…	Παραγωγική όξυνση…
+	Detail:	Λεπτομέρεια:
+	Falls back to the next option when a model can't run there.	Μεταβαίνει στην επόμενη επιλογή όταν ένα μοντέλο δεν μπορεί να εκτελεστεί εκεί.
+	Generative Sharpen needs a model. Download one in Edit › Preferences › AI Models (Generative Enhance).	Η Παραγωγική όξυνση χρειάζεται μοντέλο. Κατεβάστε ένα από Επεξεργασία › Προτιμήσεις › Μοντέλα ΤΝ (Παραγωγική βελτίωση).
+	Paint over a blurry or pixelated area	Βάψτε πάνω σε μια θολή ή πιξελιασμένη περιοχή
+	Paint over the object to select it (⇧ adds, Alt subtracts)	Βάψτε πάνω στο αντικείμενο για να το επιλέξετε (το ⇧ προσθέτει, το Alt αφαιρεί)
+	Preparing it to run… {percent}%	Προετοιμασία για εκτέλεση… {percent}%
+	Press + to make a variation, or OK to sharpen with one. Seeds change the result with Stable Diffusion models.	Πατήστε + για να δημιουργήσετε παραλλαγή ή Εντάξει για όξυνση με μία από αυτές. Οι αρχικές τιμές αλλάζουν το αποτέλεσμα στα μοντέλα Stable Diffusion.
+	Run models on	Εκτέλεση μοντέλων σε
+	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Οι αρχικές τιμές αλλάζουν το αποτέλεσμα στα μοντέλα Stable Diffusion. Αφήστε το κενό για νέα τιμή κάθε φορά.
+	The Object Selection Brush found nothing there — paint over more of the object	Το Πινέλο επιλογής αντικειμένου δεν βρήκε τίποτα εκεί — βάψτε πάνω σε μεγαλύτερο μέρος του αντικειμένου

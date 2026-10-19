@@ -3940,3 +3940,16 @@ curves	Smooth	Wygładź
 	Variation {n} · seed {seed}	Wariant {n} · ziarno {seed}
 	Variations	Warianty
 	What to avoid, e.g. blurry, text	Czego unikać, np. rozmycie, tekst
+
+# Generative Sharpen, Object Selection Brush, AI model device
+	Generative Sharpen…	Wyostrzanie generatywne…
+	Detail:	Szczegóły:
+	Falls back to the next option when a model can't run there.	Przechodzi do następnej opcji, gdy model nie może tam działać.
+	Generative Sharpen needs a model. Download one in Edit › Preferences › AI Models (Generative Enhance).	Wyostrzanie generatywne wymaga modelu. Pobierz go w Edycja › Preferencje › Modele AI (Ulepszanie generatywne).
+	Paint over a blurry or pixelated area	Zamaluj rozmyty lub rozpikselowany obszar
+	Paint over the object to select it (⇧ adds, Alt subtracts)	Zamaluj obiekt, aby go zaznaczyć (⇧ dodaje, Alt odejmuje)
+	Preparing it to run… {percent}%	Przygotowywanie do uruchomienia… {percent}%
+	Press + to make a variation, or OK to sharpen with one. Seeds change the result with Stable Diffusion models.	Naciśnij +, aby utworzyć wariant, albo OK, aby wyostrzyć jednym z nich. Ziarno zmienia wynik w modelach Stable Diffusion.
+	Run models on	Uruchamiaj modele na
+	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Ziarno zmienia wynik w modelach Stable Diffusion. Zostaw puste, aby za każdym razem użyć nowego.
+	The Object Selection Brush found nothing there — paint over more of the object	Pędzel zaznaczania obiektów nic tam nie znalazł — zamaluj większą część obiektu

@@ -3350,3 +3350,16 @@ curves	Smooth	Lisser
 	Variations	Variantes
 	What to avoid, e.g. blurry, text	Ce qu'il faut éviter, p. ex. flou, texte
 	Seed	Graine
+
+# Generative Sharpen, Object Selection Brush, AI model device
+	Generative Sharpen…	Netteté générative…
+	Detail:	Détail :
+	Falls back to the next option when a model can't run there.	Passe à l'option suivante lorsqu'un modèle ne peut pas s'y exécuter.
+	Generative Sharpen needs a model. Download one in Edit › Preferences › AI Models (Generative Enhance).	La Netteté générative a besoin d'un modèle. Téléchargez-en un dans Édition › Préférences › Modèles d'IA (Amélioration générative).
+	Paint over a blurry or pixelated area	Peignez sur une zone floue ou pixelisée
+	Paint over the object to select it (⇧ adds, Alt subtracts)	Peignez sur l'objet pour le sélectionner (⇧ ajoute, Alt soustrait)
+	Preparing it to run… {percent}%	Préparation de l'exécution… {percent} %
+	Press + to make a variation, or OK to sharpen with one. Seeds change the result with Stable Diffusion models.	Appuyez sur + pour créer une variante, ou sur OK pour renforcer la netteté avec l'une d'elles. Les graines modifient le résultat avec les modèles Stable Diffusion.
+	Run models on	Exécuter les modèles sur
+	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Les graines modifient le résultat avec les modèles Stable Diffusion. Laissez vide pour en obtenir une nouvelle à chaque fois.
+	The Object Selection Brush found nothing there — paint over more of the object	Le Pinceau de sélection d'objet n'a rien trouvé ici — peignez sur une plus grande partie de l'objet

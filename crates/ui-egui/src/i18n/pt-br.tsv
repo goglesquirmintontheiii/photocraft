@@ -4131,3 +4131,16 @@ layerLabel	No Color	Sem cor
 	Variation {n} · seed {seed}	Variação {n} · semente {seed}
 	Variations	Variações
 	What to avoid, e.g. blurry, text	O que evitar, por ex. desfocado, texto
+
+# Generative Sharpen, Object Selection Brush, AI model device
+	Generative Sharpen…	Nitidez generativa…
+	Detail:	Detalhe:
+	Falls back to the next option when a model can't run there.	Passa para a próxima opção quando um modelo não consegue ser executado ali.
+	Generative Sharpen needs a model. Download one in Edit › Preferences › AI Models (Generative Enhance).	A Nitidez generativa precisa de um modelo. Baixe um em Editar › Preferências › Modelos de IA (Aprimoramento generativo).
+	Paint over a blurry or pixelated area	Pinte sobre uma área desfocada ou pixelada
+	Paint over the object to select it (⇧ adds, Alt subtracts)	Pinte sobre o objeto para selecioná-lo (⇧ adiciona, Alt subtrai)
+	Preparing it to run… {percent}%	Preparando para executar… {percent}%
+	Press + to make a variation, or OK to sharpen with one. Seeds change the result with Stable Diffusion models.	Pressione + para criar uma variação, ou OK para aplicar nitidez com uma delas. As sementes mudam o resultado com modelos Stable Diffusion.
+	Run models on	Executar modelos em
+	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	As sementes mudam o resultado com modelos Stable Diffusion. Deixe vazio para uma nova a cada vez.
+	The Object Selection Brush found nothing there — paint over more of the object	O Pincel de seleção de objeto não encontrou nada aí — pinte sobre uma parte maior do objeto

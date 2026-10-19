@@ -2953,3 +2953,16 @@ curves	Smooth	平滑
 	What to avoid, e.g. blurry, text	要避免的內容，例如：模糊、文字
 	Seed	種子
 	Stop	停止
+
+# Generative Sharpen, Object Selection Brush, AI model device
+	Generative Sharpen…	生成式銳利化…
+	Detail:	細節:
+	Falls back to the next option when a model can't run there.	模型無法在該裝置上執行時，自動改用下一個選項。
+	Generative Sharpen needs a model. Download one in Edit › Preferences › AI Models (Generative Enhance).	生成式銳利化需要模型。請在 編輯 › 偏好設定 › AI 模型（生成式增強）中下載。
+	Paint over a blurry or pixelated area	塗抹模糊或像素化的區域
+	Paint over the object to select it (⇧ adds, Alt subtracts)	塗抹物件以選取它（⇧ 增加，Alt 減去）
+	Preparing it to run… {percent}%	正在準備執行… {percent}%
+	Press + to make a variation, or OK to sharpen with one. Seeds change the result with Stable Diffusion models.	按 + 產生變體，按「確定」以其中一個銳利化。種子僅對 Stable Diffusion 模型的結果有影響。
+	Run models on	執行模型於
+	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	種子僅對 Stable Diffusion 模型的結果有影響。留空則每次使用新種子。
+	The Object Selection Brush found nothing there — paint over more of the object	物件選取筆刷在那裡沒有找到任何內容 — 請塗抹物件的更多部分

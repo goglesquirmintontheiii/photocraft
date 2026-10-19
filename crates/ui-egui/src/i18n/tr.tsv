@@ -4071,3 +4071,16 @@ cameraData	Lens	Lens
 	Variation {n} · seed {seed}	Varyasyon {n} · tohum {seed}
 	Variations	Varyasyonlar
 	What to avoid, e.g. blurry, text	Kaçınılacaklar, ör. bulanık, metin
+
+# Generative Sharpen, Object Selection Brush, AI model device
+	Generative Sharpen…	Üretken Keskinleştirme…
+	Detail:	Ayrıntı:
+	Falls back to the next option when a model can't run there.	Bir model orada çalışamadığında sonraki seçeneğe geçer.
+	Generative Sharpen needs a model. Download one in Edit › Preferences › AI Models (Generative Enhance).	Üretken Keskinleştirme için bir model gerekir. Düzen › Tercihler › Yapay Zeka Modelleri (Üretken İyileştirme) bölümünden bir model indirin.
+	Paint over a blurry or pixelated area	Bulanık veya pikselli bir alanın üzerine boyayın
+	Paint over the object to select it (⇧ adds, Alt subtracts)	Seçmek için nesnenin üzerine boyayın (⇧ ekler, Alt çıkarır)
+	Preparing it to run… {percent}%	Çalıştırmaya hazırlanıyor… %{percent}
+	Press + to make a variation, or OK to sharpen with one. Seeds change the result with Stable Diffusion models.	Varyasyon oluşturmak için +, biriyle keskinleştirmek için Tamam düğmesine basın. Tohumlar, Stable Diffusion modellerinde sonucu değiştirir.
+	Run models on	Modelleri çalıştırma yeri
+	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Tohumlar, Stable Diffusion modellerinde sonucu değiştirir. Her seferinde yenisi için boş bırakın.
+	The Object Selection Brush found nothing there — paint over more of the object	Nesne Seçme Fırçası orada bir şey bulamadı — nesnenin daha fazlasının üzerine boyayın

@@ -4260,3 +4260,16 @@ cameraRaw	Yellow	Sárga
 	Variation {n} · seed {seed}	{n}. változat · kezdőérték: {seed}
 	Variations	Változatok
 	What to avoid, e.g. blurry, text	Mit kerüljön, pl. elmosódott, szöveg
+
+# Generative Sharpen, Object Selection Brush, AI model device
+	Generative Sharpen…	Generatív élesítés…
+	Detail:	Részletesség:
+	Falls back to the next option when a model can't run there.	A következő lehetőségre vált, ha egy modell ott nem tud futni.
+	Generative Sharpen needs a model. Download one in Edit › Preferences › AI Models (Generative Enhance).	A Generatív élesítéshez modell kell. Töltsön le egyet: Szerkesztés › Beállítások › MI-modellek (Generatív javítás).
+	Paint over a blurry or pixelated area	Fessen egy elmosódott vagy pixeles terület fölé
+	Paint over the object to select it (⇧ adds, Alt subtracts)	Fessen az objektum fölé a kijelöléséhez (⇧ hozzáad, Alt kivon)
+	Preparing it to run… {percent}%	Előkészítés a futtatásra… {percent}%
+	Press + to make a variation, or OK to sharpen with one. Seeds change the result with Stable Diffusion models.	A + megnyomásával változatot készít, az OK gombbal pedig élesít az egyikkel. A kezdőérték a Stable Diffusion modelleknél változtatja meg az eredményt.
+	Run models on	Modellek futtatása ezen:
+	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	A kezdőérték a Stable Diffusion modelleknél változtatja meg az eredményt. Hagyja üresen, ha minden alkalommal újat szeretne.
+	The Object Selection Brush found nothing there — paint over more of the object	Az objektumkijelölő ecset nem talált ott semmit — fessen az objektum nagyobb része fölé

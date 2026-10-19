@@ -3344,3 +3344,16 @@ curves	Smooth	Glätten
 	Variations	Varianten
 	What to avoid, e.g. blurry, text	Was vermieden werden soll, z. B. unscharf, Text
 	Stop	Anhalten
+
+# Generative Sharpen, Object Selection Brush, AI model device
+	Generative Sharpen…	Generatives Scharfzeichnen…
+	Detail:	Detail:
+	Falls back to the next option when a model can't run there.	Weicht auf die nächste Option aus, wenn ein Modell dort nicht laufen kann.
+	Generative Sharpen needs a model. Download one in Edit › Preferences › AI Models (Generative Enhance).	Generatives Scharfzeichnen braucht ein Modell. Laden Sie eines unter Bearbeiten › Voreinstellungen › KI-Modelle (Generatives Verbessern) herunter.
+	Paint over a blurry or pixelated area	Über einen unscharfen oder verpixelten Bereich malen
+	Paint over the object to select it (⇧ adds, Alt subtracts)	Über das Objekt malen, um es auszuwählen (⇧ fügt hinzu, Alt zieht ab)
+	Preparing it to run… {percent}%	Wird für die Ausführung vorbereitet… {percent} %
+	Press + to make a variation, or OK to sharpen with one. Seeds change the result with Stable Diffusion models.	Drücken Sie +, um eine Variante zu erstellen, oder OK, um mit einer scharfzuzeichnen. Startwerte ändern das Ergebnis bei Stable-Diffusion-Modellen.
+	Run models on	Modelle ausführen auf
+	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Startwerte ändern das Ergebnis bei Stable-Diffusion-Modellen. Leer lassen, um jedes Mal einen neuen zu erhalten.
+	The Object Selection Brush found nothing there — paint over more of the object	Der Objektauswahl-Pinsel hat dort nichts gefunden – malen Sie über mehr vom Objekt

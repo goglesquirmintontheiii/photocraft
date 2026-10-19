@@ -4414,3 +4414,16 @@ shape	Appearance	Izgled
 	Variation {n} · seed {seed}	Varijacija {n} · seme {seed}
 	Variations	Varijacije
 	What to avoid, e.g. blurry, text	Šta izbeći, npr. mutno, tekst
+
+# Generative Sharpen, Object Selection Brush, AI model device
+	Generative Sharpen…	Generativno izoštravanje…
+	Detail:	Detalji:
+	Falls back to the next option when a model can't run there.	Prelazi na sledeću opciju kada model ne može tu da se pokrene.
+	Generative Sharpen needs a model. Download one in Edit › Preferences › AI Models (Generative Enhance).	Za generativno izoštravanje potreban je model. Preuzmite ga u Uređivanje › Podešavanja › AI modeli (Generativno poboljšanje).
+	Paint over a blurry or pixelated area	Prebojite zamućenu ili pikselizovanu oblast
+	Paint over the object to select it (⇧ adds, Alt subtracts)	Prebojite objekat da biste ga izabrali (⇧ dodaje, Alt oduzima)
+	Preparing it to run… {percent}%	Priprema za pokretanje… {percent}%
+	Press + to make a variation, or OK to sharpen with one. Seeds change the result with Stable Diffusion models.	Pritisnite + da napravite varijaciju, ili U redu da izoštrite jednom od njih. Seme menja rezultat kod Stable Diffusion modela.
+	Run models on	Pokreći modele na
+	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Seme menja rezultat kod Stable Diffusion modela. Ostavite prazno za novo seme svaki put.
+	The Object Selection Brush found nothing there — paint over more of the object	Četkica za izbor objekta tu nije ništa našla — prebojite veći deo objekta

@@ -3829,3 +3829,16 @@ curves	Smooth	Làm mượt
 	Variation {n} · seed {seed}	Biến thể {n} · hạt giống {seed}
 	Variations	Biến thể
 	What to avoid, e.g. blurry, text	Những gì cần tránh, ví dụ: mờ, chữ
+
+# Generative Sharpen, Object Selection Brush, AI model device
+	Generative Sharpen…	Làm nét tạo sinh…
+	Detail:	Chi tiết:
+	Falls back to the next option when a model can't run there.	Chuyển sang tùy chọn tiếp theo khi mô hình không chạy được ở đó.
+	Generative Sharpen needs a model. Download one in Edit › Preferences › AI Models (Generative Enhance).	Làm nét tạo sinh cần một mô hình. Hãy tải một mô hình trong Chỉnh sửa › Tùy chọn › Mô hình AI (Cải thiện tạo sinh).
+	Paint over a blurry or pixelated area	Tô lên vùng bị mờ hoặc vỡ điểm ảnh
+	Paint over the object to select it (⇧ adds, Alt subtracts)	Tô lên đối tượng để chọn nó (⇧ thêm, Alt bớt)
+	Preparing it to run… {percent}%	Đang chuẩn bị để chạy… {percent}%
+	Press + to make a variation, or OK to sharpen with one. Seeds change the result with Stable Diffusion models.	Nhấn + để tạo biến thể, hoặc OK để làm nét bằng một biến thể. Hạt giống chỉ thay đổi kết quả với các mô hình Stable Diffusion.
+	Run models on	Chạy mô hình trên
+	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Hạt giống chỉ thay đổi kết quả với các mô hình Stable Diffusion. Để trống để có hạt giống mới mỗi lần.
+	The Object Selection Brush found nothing there — paint over more of the object	Cọ Chọn đối tượng không tìm thấy gì ở đó — hãy tô lên nhiều phần hơn của đối tượng

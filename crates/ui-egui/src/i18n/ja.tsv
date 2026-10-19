@@ -4018,3 +4018,16 @@ curves	Smooth	スムーズ
 	Variation {n} · seed {seed}	バリエーション {n} · シード {seed}
 	Variations	バリエーション
 	What to avoid, e.g. blurry, text	避けたいもの (例: ぼやけ、テキスト)
+
+# Generative Sharpen, Object Selection Brush, AI model device
+	Generative Sharpen…	生成シャープ…
+	Detail:	ディテール:
+	Falls back to the next option when a model can't run there.	そこでモデルを実行できない場合は次の選択肢に切り替えます。
+	Generative Sharpen needs a model. Download one in Edit › Preferences › AI Models (Generative Enhance).	生成シャープにはモデルが必要です。編集 › 環境設定 › AI モデル (生成強化) でダウンロードしてください。
+	Paint over a blurry or pixelated area	ぼやけた部分やピクセル化した部分をペイントします
+	Paint over the object to select it (⇧ adds, Alt subtracts)	選択するオブジェクトの上をペイントします (⇧ で追加、Alt で削除)
+	Preparing it to run… {percent}%	実行の準備中… {percent}%
+	Press + to make a variation, or OK to sharpen with one. Seeds change the result with Stable Diffusion models.	+ でバリエーションを作成し、OK でそのいずれかでシャープにします。シードで結果が変わるのは Stable Diffusion モデルの場合です。
+	Run models on	モデルの実行先
+	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	シードで結果が変わるのは Stable Diffusion モデルの場合です。毎回新しいシードにするには空欄のままにします。
+	The Object Selection Brush found nothing there — paint over more of the object	オブジェクト選択ブラシでは何も見つかりませんでした — オブジェクトのより広い範囲をペイントしてください

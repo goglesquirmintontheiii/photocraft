@@ -3337,3 +3337,16 @@ curves	Smooth	Haluskan
 	Variations	Variasi
 	What to avoid, e.g. blurry, text	Yang dihindari, mis. buram, teks
 	Seed	Seed
+
+# Generative Sharpen, Object Selection Brush, AI model device
+	Generative Sharpen…	Pertajam Generatif…
+	Detail:	Detail:
+	Falls back to the next option when a model can't run there.	Beralih ke opsi berikutnya jika model tidak dapat berjalan di sana.
+	Generative Sharpen needs a model. Download one in Edit › Preferences › AI Models (Generative Enhance).	Pertajam Generatif memerlukan model. Unduh satu di Edit › Preferensi › Model AI (Peningkatan Generatif).
+	Paint over a blurry or pixelated area	Lukis di atas area yang buram atau pecah-pecah
+	Paint over the object to select it (⇧ adds, Alt subtracts)	Lukis di atas objek untuk memilihnya (⇧ menambah, Alt mengurangi)
+	Preparing it to run… {percent}%	Menyiapkan agar dapat berjalan… {percent}%
+	Press + to make a variation, or OK to sharpen with one. Seeds change the result with Stable Diffusion models.	Tekan + untuk membuat variasi, atau OK untuk mempertajam dengan salah satunya. Seed mengubah hasil pada model Stable Diffusion.
+	Run models on	Jalankan model di
+	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Seed mengubah hasil pada model Stable Diffusion. Kosongkan untuk seed baru setiap kali.
+	The Object Selection Brush found nothing there — paint over more of the object	Kuas Pemilihan Objek tidak menemukan apa pun di sana — lukis lebih banyak bagian objek

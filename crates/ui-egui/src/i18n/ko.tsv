@@ -3525,3 +3525,16 @@ curves	Smooth	매끄럽게
 	Variations	변형
 	What to avoid, e.g. blurry, text	피할 것, 예: 흐림, 텍스트
 	Stop	중지
+
+# Generative Sharpen, Object Selection Brush, AI model device
+	Generative Sharpen…	생성형 선명하게…
+	Detail:	디테일:
+	Falls back to the next option when a model can't run there.	모델을 그곳에서 실행할 수 없으면 다음 옵션으로 넘어갑니다.
+	Generative Sharpen needs a model. Download one in Edit › Preferences › AI Models (Generative Enhance).	생성형 선명하게에는 모델이 필요합니다. 편집 › 환경 설정 › AI 모델(생성형 향상)에서 다운로드하세요.
+	Paint over a blurry or pixelated area	흐리거나 픽셀이 깨진 영역 위에 칠하세요
+	Paint over the object to select it (⇧ adds, Alt subtracts)	선택할 개체 위에 칠하세요(⇧ 추가, Alt 빼기)
+	Preparing it to run… {percent}%	실행 준비 중… {percent}%
+	Press + to make a variation, or OK to sharpen with one. Seeds change the result with Stable Diffusion models.	+를 누르면 변형을 만들고, 확인을 누르면 그중 하나로 선명하게 합니다. 시드는 Stable Diffusion 모델에서만 결과를 바꿉니다.
+	Run models on	모델 실행 장치
+	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	시드는 Stable Diffusion 모델에서만 결과를 바꿉니다. 매번 새 시드를 쓰려면 비워 두세요.
+	The Object Selection Brush found nothing there — paint over more of the object	개체 선택 브러시가 그곳에서 아무것도 찾지 못했습니다 — 개체를 더 많이 칠해 보세요

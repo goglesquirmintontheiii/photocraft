@@ -4101,3 +4101,16 @@ curves	Smooth	Vloeiend maken
 	Variation {n} · seed {seed}	Variatie {n} · startwaarde {seed}
 	Variations	Variaties
 	What to avoid, e.g. blurry, text	Wat te vermijden, bijv. wazig, tekst
+
+# Generative Sharpen, Object Selection Brush, AI model device
+	Generative Sharpen…	Generatief verscherpen…
+	Detail:	Detail:
+	Falls back to the next option when a model can't run there.	Valt terug op de volgende optie als een model daar niet kan draaien.
+	Generative Sharpen needs a model. Download one in Edit › Preferences › AI Models (Generative Enhance).	Generatief verscherpen heeft een model nodig. Download er een via Bewerken › Voorkeuren › AI-modellen (Generatief verbeteren).
+	Paint over a blurry or pixelated area	Schilder over een wazig of korrelig gebied
+	Paint over the object to select it (⇧ adds, Alt subtracts)	Schilder over het object om het te selecteren (⇧ voegt toe, Alt trekt af)
+	Preparing it to run… {percent}%	Voorbereiden om uit te voeren… {percent}%
+	Press + to make a variation, or OK to sharpen with one. Seeds change the result with Stable Diffusion models.	Druk op + om een variatie te maken, of op OK om met een ervan te verscherpen. Startwaarden veranderen het resultaat bij Stable Diffusion-modellen.
+	Run models on	Modellen uitvoeren op
+	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Startwaarden veranderen het resultaat bij Stable Diffusion-modellen. Laat leeg voor elke keer een nieuwe.
+	The Object Selection Brush found nothing there — paint over more of the object	Het objectselectiepenseel heeft daar niets gevonden — schilder over meer van het object

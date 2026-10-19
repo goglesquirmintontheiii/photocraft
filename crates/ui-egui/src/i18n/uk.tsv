@@ -4049,3 +4049,16 @@ curves	Smooth	Згладити
 	Variation {n} · seed {seed}	Варіант {n} · початкове значення {seed}
 	Variations	Варіанти
 	What to avoid, e.g. blurry, text	Чого уникати, наприклад розмиття, текст
+
+# Generative Sharpen, Object Selection Brush, AI model device
+	Generative Sharpen…	Генеративна різкість…
+	Detail:	Деталізація:
+	Falls back to the next option when a model can't run there.	Якщо модель не може працювати на цьому пристрої, використовується наступний варіант.
+	Generative Sharpen needs a model. Download one in Edit › Preferences › AI Models (Generative Enhance).	Для генеративної різкості потрібна модель. Завантажте її в розділі Редагування › Налаштування › Моделі ШІ (Генеративне покращення).
+	Paint over a blurry or pixelated area	Замалюйте розмиту або піксельовану область
+	Paint over the object to select it (⇧ adds, Alt subtracts)	Замалюйте об'єкт, щоб виділити його (⇧ додає, Alt віднімає)
+	Preparing it to run… {percent}%	Підготовка до запуску… {percent}%
+	Press + to make a variation, or OK to sharpen with one. Seeds change the result with Stable Diffusion models.	Натисніть +, щоб створити варіант, або «Гаразд», щоб підвищити різкість одним із них. Початкове значення впливає на результат лише в моделях Stable Diffusion.
+	Run models on	Запускати моделі на
+	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Початкове значення впливає на результат лише в моделях Stable Diffusion. Залиште поле порожнім, щоб щоразу отримувати нове.
+	The Object Selection Brush found nothing there — paint over more of the object	Пензель виділення об'єктів нічого там не знайшов — замалюйте більшу частину об'єкта

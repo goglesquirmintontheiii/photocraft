@@ -4303,3 +4303,16 @@ navigator	Zoom	Zoom
 	Variation {n} · seed {seed}	Variación {n} · semilla {seed}
 	Variations	Variaciones
 	What to avoid, e.g. blurry, text	Qué evitar, p. ej. borroso, texto
+
+# Generative Sharpen, Object Selection Brush, AI model device
+	Generative Sharpen…	Enfoque generativo…
+	Detail:	Detalle:
+	Falls back to the next option when a model can't run there.	Pasa a la siguiente opción cuando un modelo no puede ejecutarse ahí.
+	Generative Sharpen needs a model. Download one in Edit › Preferences › AI Models (Generative Enhance).	El Enfoque generativo necesita un modelo. Descarga uno en Edición › Preferencias › Modelos de IA (Mejora generativa).
+	Paint over a blurry or pixelated area	Pinta sobre una zona borrosa o pixelada
+	Paint over the object to select it (⇧ adds, Alt subtracts)	Pinta sobre el objeto para seleccionarlo (⇧ añade, Alt resta)
+	Preparing it to run… {percent}%	Preparándolo para ejecutarse… {percent}%
+	Press + to make a variation, or OK to sharpen with one. Seeds change the result with Stable Diffusion models.	Pulsa + para crear una variación, o Aceptar para enfocar con una. Las semillas cambian el resultado con los modelos de Stable Diffusion.
+	Run models on	Ejecutar modelos en
+	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Las semillas cambian el resultado con los modelos de Stable Diffusion. Déjala vacía para obtener una nueva cada vez.
+	The Object Selection Brush found nothing there — paint over more of the object	El Pincel de selección de objetos no encontró nada ahí — pinta sobre una parte mayor del objeto

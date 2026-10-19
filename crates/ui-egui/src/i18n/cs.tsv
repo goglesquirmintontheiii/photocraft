@@ -3950,3 +3950,16 @@ navigator	Zoom	Zvětšení
 	Variation {n} · seed {seed}	Varianta {n} · semínko {seed}
 	Variations	Varianty
 	What to avoid, e.g. blurry, text	Čemu se vyhnout, např. rozmazané, text
+
+# Generative Sharpen, Object Selection Brush, AI model device
+	Generative Sharpen…	Generativní doostření…
+	Detail:	Detail:
+	Falls back to the next option when a model can't run there.	Když model nelze spustit tam, přejde se na další možnost.
+	Generative Sharpen needs a model. Download one in Edit › Preferences › AI Models (Generative Enhance).	Generativní doostření potřebuje model. Stáhněte ho v Úpravy › Předvolby › Modely AI (Generativní vylepšení).
+	Paint over a blurry or pixelated area	Přemalujte rozmazanou nebo rozpixelovanou oblast
+	Paint over the object to select it (⇧ adds, Alt subtracts)	Přemalujte objekt, který chcete vybrat (⇧ přidává, Alt odebírá)
+	Preparing it to run… {percent}%	Příprava ke spuštění… {percent}%
+	Press + to make a variation, or OK to sharpen with one. Seeds change the result with Stable Diffusion models.	Stisknutím + vytvoříte variantu, tlačítkem OK oblast jednou z nich doostříte. Semínko mění výsledek u modelů Stable Diffusion.
+	Run models on	Spouštět modely na
+	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Semínko mění výsledek u modelů Stable Diffusion. Nechte pole prázdné, chcete-li pokaždé nový.
+	The Object Selection Brush found nothing there — paint over more of the object	Štětec výběru objektu tam nic nenašel — přemalujte větší část objektu
