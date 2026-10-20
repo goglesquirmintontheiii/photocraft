@@ -1,5 +1,7 @@
 name: clippy-debug
-on: workflow_dispatch
+on:
+  push:
+    branches: [ci-debug]
 jobs:
   clippy:
     runs-on: ubuntu-latest
