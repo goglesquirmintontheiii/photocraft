@@ -1,0 +1,24 @@
+name: win-debug
+on:
+  push:
+    branches: [ci-debug-3]
+jobs:
+  unit:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: unit tests
+        shell: bash
+        env:
+          CARGO_PROFILE_DEV_DEBUG: "0"
+          CARGO_PROFILE_TEST_DEBUG: "0"
+        run: |
+          set +e
+          for p in photocraft-ml photocraft-engine photocraft-ui-egui photocraft; do
+            cargo test -p $p --lib --bins --no-fail-fast > out-$p.txt 2>&1
+            echo "::notice::$p exit $?"
+            grep -E "^test .* FAILED|panicked at|test result" out-$p.txt | head -20 | while IFS= read -r l; do echo "::error::$p: $l"; done
+            grep -A4 "panicked at" out-$p.txt | grep -v "^--" | head -40 | while IFS= read -r l; do echo "::warning::$p: $l"; done
+          done
+          exit 0
