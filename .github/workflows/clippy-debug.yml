@@ -1,0 +1,23 @@
+name: clippy-debug
+on:
+  push:
+    branches: [ci-debug-2]
+jobs:
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - run: sudo apt-get update && sudo apt-get install -y libheif-dev libxkbcommon-dev libwayland-dev libx11-dev libxcursor-dev libxrandr-dev libxi-dev libgtk-3-dev || true
+      - name: clippy
+        shell: bash
+        run: |
+          rustc --version | sed 's/^/::notice::/'
+          set +e
+          cargo clippy --workspace --all-targets --locked --features heif --message-format=short --color=never -- -D warnings > out.txt 2>&1
+          code=$?
+          grep -E "^[^ ].*(error|warning)" out.txt | grep -v "build failed" | head -60 | while IFS= read -r l; do echo "::error::$l"; done
+          echo "::notice::clippy exit $code"
+          exit $code
