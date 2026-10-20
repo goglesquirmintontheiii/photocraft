@@ -3370,6 +3370,10 @@ curves	Smooth	매끄럽게
 # View › Guides › right-click a guide
 	Edit Selected Guides	선택한 안내선 편집
 	Clear Selected Guides	선택한 안내선 지우기
+	Pasting from other apps is unavailable	다른 앱에서 붙여넣기를 사용할 수 없습니다
+	PhotoCraft can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	이 세션에서는 PhotoCraft가 시스템 클립보드에 접근할 수 없습니다. Wayland에서는 Flatpak 샌드박스가 다른 앱의 이미지를 읽는 데 쓰이는 프로토콜을 숨깁니다.
+	To paste from other apps, start PhotoCraft under XWayland: `{command}`	다른 앱에서 붙여넣으려면 XWayland에서 PhotoCraft를 실행하세요: `{command}`
+	Nothing to paste: PhotoCraft can't read the system clipboard here	붙여넣을 내용 없음: 여기서는 PhotoCraft가 시스템 클립보드를 읽을 수 없습니다
 	Delete this set	이 세트 삭제
 	New Set…	새 세트…
 	PhotoCraft Defaults	PhotoCraft 기본값
@@ -3412,6 +3416,12 @@ curves	Smooth	매끄럽게
 	Increase Brush Size	브러시 크기 늘리기
 	Decrease Brush Hardness	브러시 경도 줄이기
 	Increase Brush Hardness	브러시 경도 늘리기
+	Memory Usage	메모리 사용량
+	Per-document RAM limit (MB)	문서당 RAM 한도(MB)
+	Installed RAM: {ram} MB; this limit: {percent}%	설치된 RAM: {ram} MB; 이 한도: {percent}%
+	Limits each open document's pixels plus History. Oldest undo states are discarded when the limit is exceeded.	열린 각 문서의 픽셀과 기록을 제한합니다. 한도를 넘으면 가장 오래된 실행 취소 상태가 버려집니다.
+	Applies immediately when saved. Memory is not reserved in advance.	저장하면 바로 적용됩니다. 메모리를 미리 예약하지 않습니다.
+	With GPU Memory set to Automatic, this also limits the GPU layer budget. That budget is capped at one quarter of installed RAM and, when known, three eighths of the graphics card's memory, with a 512 MB minimum. Raising this limit beyond those caps does not increase the GPU budget.	GPU 메모리가 자동이면 GPU 레이어 예산도 제한합니다. 상한은 설치 RAM의 1/4, 알려진 경우 그래픽 메모리의 3/8, 최소 512MB입니다. 이보다 올려도 GPU 예산은 늘지 않습니다.
 	Use	사용
 	In Front	앞
 	Behind	뒤

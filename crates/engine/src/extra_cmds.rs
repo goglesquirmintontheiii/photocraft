@@ -872,7 +872,9 @@ pub fn specs() -> Vec<CommandSpec> {
             if all == d.doc.bounds() {
                 return Ok(json!({"changed": false}));
             }
-            s.execute("image.crop", json!({"x": all.x0, "y": all.y0, "width": all.width(), "height": all.height(), "deleteCroppedPixels": false}))?;
+            // One History step named as in Photoshop, not the crop's "Crop".
+            let p = json!({"x": all.x0, "y": all.y0, "width": all.width(), "height": all.height(), "deleteCroppedPixels": false});
+            crate::analysis_cmds::compound(s, "Reveal All", |s| s.execute("image.crop", p))?;
             Ok(json!({"changed": true}))
         }),
         spec!(
@@ -1760,8 +1762,12 @@ mod tests {
         s.execute("layer.translate", json!({"dx": 0, "dy": 0})).ok();
         paint_square(&mut s, Rect::new(-5, 0, 10, 10), [1.0, 0.0, 0.0, 1.0]);
         assert_eq!(reveal_all_bounds(doc(&s)), Rect::new(-5, 0, 40, 30));
+        let steps = s.active().unwrap().history.past_len();
         s.execute("image.revealAll", json!({})).unwrap();
         assert_eq!((doc(&s).size.width, doc(&s).size.height), (45, 30));
+        let history = &s.active().unwrap().history;
+        assert_eq!(history.past_len(), steps + 1, "one step");
+        assert_eq!(history.entries().last().map(String::as_str), Some("Reveal All"), "named as in Photoshop, not Crop");
         assert_eq!(s.execute("image.revealAll", json!({})).unwrap()["changed"], false);
     }
 

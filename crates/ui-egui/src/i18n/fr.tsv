@@ -3196,6 +3196,10 @@ curves	Smooth	Lisser
 # View › Guides › right-click a guide
 	Edit Selected Guides	Modifier les repères sélectionnés
 	Clear Selected Guides	Effacer les repères sélectionnés
+	Pasting from other apps is unavailable	Le collage depuis d’autres applications est indisponible
+	PhotoCraft can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	PhotoCraft ne peut pas accéder au presse-papiers du système dans cette session. Sous Wayland, le bac à sable Flatpak masque le protocole par lequel les images des autres applications sont lues.
+	To paste from other apps, start PhotoCraft under XWayland: `{command}`	Pour coller depuis d’autres applications, lancez PhotoCraft sous XWayland : `{command}`
+	Nothing to paste: PhotoCraft can't read the system clipboard here	Rien à coller : PhotoCraft ne peut pas lire ici le presse-papiers du système
 	Delete this set	Supprimer ce jeu
 	New Set…	Nouveau jeu…
 	PhotoCraft Defaults	Valeurs par défaut de PhotoCraft
@@ -3239,6 +3243,12 @@ curves	Smooth	Lisser
 	Increase Brush Size	Augmenter la taille du pinceau
 	Decrease Brush Hardness	Réduire la dureté du pinceau
 	Increase Brush Hardness	Augmenter la dureté du pinceau
+	Memory Usage	Utilisation de la mémoire
+	Per-document RAM limit (MB)	Limite RAM par document (Mo)
+	Installed RAM: {ram} MB; this limit: {percent}%	RAM installée : {ram} Mo ; cette limite : {percent}%
+	Limits each open document's pixels plus History. Oldest undo states are discarded when the limit is exceeded.	Limite les pixels plus l’Historique de chaque document ouvert. Les plus anciens états d’annulation sont supprimés au-delà de la limite.
+	Applies immediately when saved. Memory is not reserved in advance.	S’applique dès l’enregistrement. La mémoire n’est pas réservée à l’avance.
+	With GPU Memory set to Automatic, this also limits the GPU layer budget. That budget is capped at one quarter of installed RAM and, when known, three eighths of the graphics card's memory, with a 512 MB minimum. Raising this limit beyond those caps does not increase the GPU budget.	Si Mémoire GPU est Automatique, cela limite aussi le budget GPU. Il est plafonné à un quart de la RAM et, si connu, aux trois huitièmes de la mémoire de la carte, minimum 512 Mo. Dépasser ces plafonds n’augmente pas le budget GPU.
 	Use	Utiliser
 	In Front	Devant
 	Behind	Derrière

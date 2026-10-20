@@ -964,6 +964,33 @@ fn temporary_type_transform_free_scale_center_scale_move_skew_and_rotation() {
     }
 }
 
+/// Editing paragraph text, a click inside the box but off the glyphs moves the caret to the
+/// nearest offset, as in Photoshop; a click outside the box still commits.
+#[test]
+fn click_inside_the_paragraph_box_off_the_glyphs_moves_the_caret() {
+    use crate::canvas::{ToolEvent, tool_event};
+    // The box is 240 × 180; the two 32 pt lines only fill its top.
+    let (mut app, id) = transform_app(true, false, Affine::translate(400.0, 350.0));
+    let (bx, by, _, h) = super::box_shape(&app, id).unwrap();
+    let (l, aff, _) = layout(&mut app, id).unwrap();
+    let click = |app: &mut PhotocraftApp, tx: f32, ty: f32| {
+        let p = aff.apply(Point::new(f64::from(tx), f64::from(ty)));
+        tool_event(app, ToolEvent::Down { x: p.x, y: p.y, pressure: 1.0 }, Modifiers::NONE);
+        tool_event(app, ToolEvent::Up { x: p.x, y: p.y }, Modifiers::NONE);
+    };
+    let layers = app.session.active().unwrap().doc.layers.len();
+    // Near the bottom of the box, just right of its left edge.
+    assert!(!photocraft_text::text_point_inside(&l, bx + 8.0, by + h - 8.0, 6.0), "the point is off the glyphs");
+    click(&mut app, bx + 8.0, by + h - 8.0);
+    let ed = app.ui.text_edit.clone().expect("still editing");
+    // "Hello é世界\n" is 10 characters: the start of the second line.
+    assert_eq!((ed.layer, ed.caret, ed.anchor), (id.0, 10, 10));
+    // Outside the box the edit commits, without starting new text.
+    click(&mut app, bx - 40.0, by + h - 8.0);
+    assert!(app.ui.text_edit.is_none());
+    assert_eq!(app.session.active().unwrap().doc.layers.len(), layers);
+}
+
 #[test]
 fn temporary_type_transform_noop_cancel_and_stale_capture() {
     use crate::canvas::{ToolEvent, tool_event};
@@ -1552,6 +1579,14 @@ mod multi_layer_formatting {
     }
 
     #[test]
+    fn hyphenate_is_not_shown_while_layout_does_not_hyphenate() {
+        // #6710: layout never hyphenates; the control must stay hidden until it does.
+        let (app, _) = fixture();
+        let h = controls(app, true);
+        assert!(h.query_by_label("Hyphenate").is_none());
+    }
+
+    #[test]
     fn properties_edit_shown_metrics_and_paragraphs_with_a_non_type_primary() {
         let (mut app, ids) = fixture();
         let untouched = style(&app, ids[2], 0);
@@ -1568,8 +1603,6 @@ mod multi_layer_formatting {
         h.run();
         h.get_by_label("Center text").click();
         h.run();
-        h.get_by_label("Hyphenate").click();
-        h.run();
         number(&mut h, "Indent left margin", "9");
         for (id, scale) in [(ids[0], 2.0), (ids[1], 4.0)] {
             let c = style(h.state(), id, 0);
@@ -1578,7 +1611,6 @@ mod multi_layer_formatting {
             assert!(c.faux_bold);
             let p = text(h.state(), id).paragraph_runs()[0].style.clone();
             assert_eq!(p.align, TextAlign::Center);
-            assert!(p.hyphenate);
             assert_eq!(p.start_indent_pt, 9.0);
         }
         assert_eq!(style(h.state(), ids[2], 0), untouched);

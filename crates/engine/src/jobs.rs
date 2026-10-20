@@ -219,10 +219,34 @@ struct Running {
     started_ms: f64,
     coalesce: Option<String>,
     color_restrict: Option<usize>,
+    /// The document's layer selection when the job started: applying targets it, not whatever
+    /// got selected meanwhile (a Type click does that without editing the document, #7366).
+    layers: Option<LayerSelection>,
     rx: std::sync::mpsc::Receiver<Result<Payload>>,
     apply: Option<Apply>,
     #[cfg(not(target_arch = "wasm32"))]
     handle: Option<std::thread::JoinHandle<()>>,
+}
+
+/// A document's active layer, selected layers and selection anchor.
+#[derive(Clone, PartialEq)]
+struct LayerSelection {
+    active: Option<LayerId>,
+    selected: Vec<LayerId>,
+    anchor: Option<LayerId>,
+}
+
+impl LayerSelection {
+    fn of(st: &crate::DocState) -> Self {
+        Self { active: st.active_layer, selected: st.selected_layers.clone(), anchor: st.layer_anchor }
+    }
+
+    fn set(self, st: &mut crate::DocState) {
+        st.active_layer = self.active;
+        st.selected_layers = self.selected;
+        st.layer_anchor = self.anchor;
+        crate::channel_cmds::fix_view(st);
+    }
 }
 
 impl Running {
@@ -333,10 +357,10 @@ pub fn run<T: Send + 'static>(
     if s.jobs.pending.is_some() {
         return Err(EngineError::Other(format!("`{label}` started a second background job in one command")));
     }
-    let (doc, snapshot) = match (lock_document, s.active()) {
-        (true, Some(st)) => (Some(st.doc.id), Some(Arc::downgrade(&st.doc))),
+    let (doc, snapshot, layers) = match (lock_document, s.active()) {
+        (true, Some(st)) => (Some(st.doc.id), Some(Arc::downgrade(&st.doc)), Some(LayerSelection::of(st))),
         (true, None) => return Err(EngineError::NoDocument),
-        (false, _) => (None, None),
+        (false, _) => (None, None, None),
     };
     let ctx = JobCtx::new();
     let (tx, rx) = std::sync::mpsc::channel::<Result<Payload>>();
@@ -382,6 +406,7 @@ pub fn run<T: Send + 'static>(
         started_ms: now_ms(),
         coalesce: s.coalesce_request.clone(),
         color_restrict: s.color_restrict,
+        layers,
         rx,
         apply: Some(erased),
         #[cfg(not(target_arch = "wasm32"))]
@@ -816,8 +841,12 @@ impl Session {
             self.journal.truncate(from);
         }
         if !crate::brush_cmds::coalesce_journal(self, id, &params) {
-            let params =
-                if id == "layer.select" && self.actions.recording.is_some() { crate::layer_multi_cmds::recorded_selection(self, params) } else { params };
+            let params = match id {
+                _ if self.actions.recording.is_none() => params,
+                "layer.select" => crate::layer_multi_cmds::recorded_selection(self, params),
+                "layerComp.apply" => crate::comps_cmds::recorded_apply(self, params),
+                _ => params,
+            };
             self.journal.push((id.to_string(), params));
         }
     }
@@ -839,7 +868,7 @@ impl Session {
     }
 
     fn apply_job(&mut self, job: &Running, apply: Option<Apply>, payload: Payload) -> Result<Value> {
-        let Running { label, doc, snapshot, coalesce, color_restrict, command, params, journal, .. } = job;
+        let Running { label, doc, snapshot, coalesce, color_restrict, layers, command, params, journal, .. } = job;
         let prev_active = self.active;
         let target = match doc {
             Some(d) => {
@@ -853,6 +882,19 @@ impl Session {
                 Some(i)
             }
             None => None,
+        };
+        // Selecting a layer doesn't change the document, so the snapshot check above lets it
+        // through. Apply against the layers the job started on: the colour restriction and any
+        // `active`-based edit land on them (#7366). The user's selection is put back below.
+        let user_layers = match (target, layers) {
+            (Some(i), Some(started)) => self.docs.get_mut(i).and_then(|st| {
+                let now = LayerSelection::of(st);
+                (now != *started).then(|| {
+                    started.clone().set(st);
+                    now
+                })
+            }),
+            _ => None,
         };
         self.coalesce_request = coalesce.clone();
         self.color_restrict = *color_restrict;
@@ -875,6 +917,15 @@ impl Session {
         // to that document instead, when the user switched tabs mid-job.
         if r.is_ok() {
             self.after_command(command, params.clone(), *journal, Some(nested_from));
+        }
+        // Give the user back the layers they selected while the job ran, unless the job chose a
+        // selection itself (a new layer, say) or one of their layers is gone.
+        if let (Some(started), Some(user), Some(st)) = (layers, user_layers, target.and_then(|i| self.docs.get_mut(i))) {
+            let kept = LayerSelection::of(st) == *started;
+            let exist = user.active.iter().chain(&user.selected).all(|id| st.doc.layer(*id).is_some());
+            if (r.is_err() || kept) && exist {
+                user.set(st);
+            }
         }
         // Keep the user's active document unless the job opened a new one.
         // This also restores the selection when the apply step returned an error.

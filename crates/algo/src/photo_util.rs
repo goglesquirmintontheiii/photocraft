@@ -159,15 +159,21 @@ pub(crate) fn par_map<T: Send>(n: usize, f: impl Fn(usize) -> T + Sync + Send) -
     (0..n).map(f).collect()
 }
 
+/// Advances `state` one SplitMix64 step and returns the mixed output.
+pub(crate) fn splitmix64(state: &mut u64) -> u64 {
+    *state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
+    let mut z = *state;
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+    z ^ (z >> 31)
+}
+
 /// Deterministic 64-bit generator (SplitMix64).
 pub(crate) struct Rng(pub u64);
 impl Rng {
+    /// The next value of the SplitMix64 sequence.
     pub fn next(&mut self) -> u64 {
-        self.0 = self.0.wrapping_add(0x9E37_79B9_7F4A_7C15);
-        let mut z = self.0;
-        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
-        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
-        z ^ (z >> 31)
+        splitmix64(&mut self.0)
     }
     pub fn below(&mut self, n: usize) -> usize {
         (self.next() % n.max(1) as u64) as usize
@@ -208,6 +214,29 @@ pub(crate) fn catmull_rom(t: f32) -> [f32; 4] {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The shared step and [`Rng`] reproduce the inlined copies they replaced, bit for bit.
+    #[test]
+    fn splitmix64_output_is_unchanged() {
+        /// The SplitMix64 step as each generator inlined it before.
+        fn inlined(state: &mut u64) -> u64 {
+            *state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
+            let mut z = *state;
+            z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+            z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+            z ^ (z >> 31)
+        }
+        let mut zero = 0;
+        assert_eq!([0; 3].map(|_| splitmix64(&mut zero)), [0xE220_A839_7B1D_CDAF, 0x6E78_9E6A_A1B9_65F4, 0x06C4_5D18_8009_454F]);
+        for seed in [0, 1, 42, 0x2545_F491_4F6C_DD1D, u64::MAX] {
+            let (mut shared, mut copy, mut rng) = (seed, seed, Rng(seed));
+            for _ in 0..10_000 {
+                let want = inlined(&mut copy);
+                assert_eq!(splitmix64(&mut shared), want);
+                assert_eq!(rng.next(), want);
+            }
+        }
+    }
 
     /// The shared sRGB functions match the removed copies bit for bit.
     #[test]

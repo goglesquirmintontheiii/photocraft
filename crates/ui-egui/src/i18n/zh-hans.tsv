@@ -2811,6 +2811,10 @@ curves	Smooth	平滑
 # View › Guides › right-click a guide
 	Edit Selected Guides	编辑所选参考线
 	Clear Selected Guides	清除所选参考线
+	Pasting from other apps is unavailable	无法从其他应用粘贴
+	PhotoCraft can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	PhotoCraft 在此会话中无法访问系统剪贴板。在 Wayland 上，Flatpak 沙盒会隐藏读取其他应用图像所用的协议。
+	To paste from other apps, start PhotoCraft under XWayland: `{command}`	要从其他应用粘贴，请在 XWayland 下启动 PhotoCraft：`{command}`
+	Nothing to paste: PhotoCraft can't read the system clipboard here	没有可粘贴的内容：PhotoCraft 在此无法读取系统剪贴板
 	Delete this set	删除此组
 	New Set…	新建组…
 	PhotoCraft Defaults	PhotoCraft 默认值
@@ -2854,6 +2858,12 @@ curves	Smooth	平滑
 	Increase Brush Size	增大画笔大小
 	Decrease Brush Hardness	减小画笔硬度
 	Increase Brush Hardness	增大画笔硬度
+	Memory Usage	内存使用
+	Per-document RAM limit (MB)	每个文档的 RAM 上限 (MB)
+	Installed RAM: {ram} MB; this limit: {percent}%	已安装 RAM：{ram} MB；此上限：{percent}%
+	Limits each open document's pixels plus History. Oldest undo states are discarded when the limit is exceeded.	限制每个打开文档的像素加历史记录。超出上限时会丢弃最旧的撤销状态。
+	Applies immediately when saved. Memory is not reserved in advance.	保存后立即生效。不会预先占用内存。
+	With GPU Memory set to Automatic, this also limits the GPU layer budget. That budget is capped at one quarter of installed RAM and, when known, three eighths of the graphics card's memory, with a 512 MB minimum. Raising this limit beyond those caps does not increase the GPU budget.	当 GPU 内存为自动时，这也会限制 GPU 图层预算。上限为安装 RAM 的四分之一，以及（若已知）显存的八分之三，最低 512 MB。超过这些上限不会增加 GPU 预算。
 	Use	使用
 	In Front	前面
 	Behind	后面

@@ -402,10 +402,18 @@ pub(crate) fn seam_blend(warped: &[Surface], canvas: Rect, order: &[usize], seam
                 .collect()
         })
         .collect();
-    // Shift ROIs to canvas-relative coordinates for the blend.
-    let local: Vec<RoiImage> = rois.iter().map(|r| RoiImage { x0: r.x0 - canvas.x0, y0: r.y0 - canvas.y0, ..r.clone() }).collect();
+    // Shift ROIs to canvas-relative coordinates for the blend, and back after: a shifted copy
+    // would hold every source's pixels twice (#7758).
+    for r in &mut rois {
+        r.x0 -= canvas.x0;
+        r.y0 -= canvas.y0;
+    }
     let levels = if seamless { panorama::blend_levels(cw, chh).min(7) } else { 1 };
-    let (blend, cov) = panorama::multiband(cw, chh, &local, &weights, levels);
+    let (blend, cov) = panorama::multiband(cw, chh, &rois, &weights, levels);
+    for r in &mut rois {
+        r.x0 += canvas.x0;
+        r.y0 += canvas.y0;
+    }
     let cc = fmt.mode.color_channels();
     let nch = fmt.channels();
     let mut composite = Surface::new(fmt);
