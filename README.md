@@ -7,7 +7,7 @@
   </a>
 </p>
 
-<h1 align="center">PhotoCraft</h1>
+<h1 align="center">PhotoCraft + AI tooling</h1>
 
 <p align="center">
   <b>Image editing; an open-source, clean-room reimplementation of Adobe Photoshop, rebuilt in pure Rust.</b><br>
