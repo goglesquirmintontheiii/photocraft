@@ -3538,3 +3538,10 @@ curves	Smooth	매끄럽게
 	Run models on	모델 실행 장치
 	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	시드는 Stable Diffusion 모델에서만 결과를 바꿉니다. 매번 새 시드를 쓰려면 비워 두세요.
 	The Object Selection Brush found nothing there — paint over more of the object	개체 선택 브러시가 그곳에서 아무것도 찾지 못했습니다 — 개체를 더 많이 칠해 보세요
+
+# AI model device per category, tool names
+	Subtle	약하게
+	Run on	실행 장치
+	As above	위와 동일
+	Object Selection Brush Tool	개체 선택 브러시 도구
+	Generative Enhance Brush Tool	생성형 향상 브러시 도구

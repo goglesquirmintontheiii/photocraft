@@ -4084,3 +4084,10 @@ cameraData	Lens	Lens
 	Run models on	Modelleri çalıştırma yeri
 	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Tohumlar, Stable Diffusion modellerinde sonucu değiştirir. Her seferinde yenisi için boş bırakın.
 	The Object Selection Brush found nothing there — paint over more of the object	Nesne Seçme Fırçası orada bir şey bulamadı — nesnenin daha fazlasının üzerine boyayın
+
+# AI model device per category, tool names
+	Subtle	Hafif
+	Run on	Çalıştırma yeri
+	As above	Yukarıdakiyle aynı
+	Object Selection Brush Tool	Nesne Seçme Fırçası Aracı
+	Generative Enhance Brush Tool	Üretken İyileştirme Fırçası Aracı

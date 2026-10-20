@@ -21,7 +21,7 @@ pub mod enhance;
 pub mod net;
 pub mod tokenizer;
 
-use crate::{Error, Result};
+use crate::{Error, ModelKind, Result};
 use net::{Data, Elem, Loader, Network, Port, Tensor};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU8, Ordering};
@@ -78,6 +78,49 @@ pub fn set_device(d: Device) {
 
 pub fn device() -> Device {
     Device::ALL.get(usize::from(DEVICE.load(Ordering::Relaxed))).copied().unwrap_or_default()
+}
+
+/// Per model category: where its models run, when it isn't [`device`].
+static KIND_DEVICE: std::sync::Mutex<[Option<Device>; ModelKind::ALL.len()]> = std::sync::Mutex::new([None; ModelKind::ALL.len()]);
+
+thread_local! {
+    /// The category of the models this thread is running (see [`for_kind`]).
+    static CURRENT_KIND: std::cell::Cell<Option<ModelKind>> = const { std::cell::Cell::new(None) };
+}
+
+fn kind_index(kind: ModelKind) -> Option<usize> {
+    ModelKind::ALL.iter().position(|k| *k == kind)
+}
+
+/// Where `kind`'s models run when it is set apart from [`device`] (`None`: as [`device`]).
+pub fn kind_device(kind: ModelKind) -> Option<Device> {
+    let v = KIND_DEVICE.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    kind_index(kind).and_then(|i| v.get(i).copied().flatten())
+}
+
+/// Sets where `kind`'s models run (`None`: as [`device`]).
+pub fn set_kind_device(kind: ModelKind, d: Option<Device>) {
+    let mut v = KIND_DEVICE.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    if let Some(slot) = kind_index(kind).and_then(|i| v.get_mut(i)) {
+        *slot = d;
+    }
+}
+
+/// Runs `f` with the models it loads placed as `kind`'s are.
+pub fn for_kind<R>(kind: ModelKind, f: impl FnOnce() -> R) -> R {
+    struct Restore(Option<ModelKind>);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            CURRENT_KIND.with(|c| c.set(self.0));
+        }
+    }
+    let _restore = Restore(CURRENT_KIND.with(|c| c.replace(Some(kind))));
+    f()
+}
+
+/// Where the models this thread loads now run: its category's choice, else [`device`].
+pub fn effective_device() -> Device {
+    CURRENT_KIND.with(std::cell::Cell::get).and_then(kind_device).unwrap_or_else(device)
 }
 
 /// Whether models may run on the GPU (on by default). `false` is [`Device::Cpu`].

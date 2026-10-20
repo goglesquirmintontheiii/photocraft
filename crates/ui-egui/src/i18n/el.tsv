@@ -4054,3 +4054,10 @@ curves	Smooth	Εξομάλυνση
 	Run models on	Εκτέλεση μοντέλων σε
 	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Οι αρχικές τιμές αλλάζουν το αποτέλεσμα στα μοντέλα Stable Diffusion. Αφήστε το κενό για νέα τιμή κάθε φορά.
 	The Object Selection Brush found nothing there — paint over more of the object	Το Πινέλο επιλογής αντικειμένου δεν βρήκε τίποτα εκεί — βάψτε πάνω σε μεγαλύτερο μέρος του αντικειμένου
+
+# AI model device per category, tool names
+	Subtle	Διακριτικό
+	Run on	Εκτέλεση σε
+	As above	Όπως παραπάνω
+	Object Selection Brush Tool	Πινέλο επιλογής αντικειμένου (Object Selection Brush Tool)
+	Generative Enhance Brush Tool	Πινέλο παραγωγικής βελτίωσης (Generative Enhance Brush Tool)

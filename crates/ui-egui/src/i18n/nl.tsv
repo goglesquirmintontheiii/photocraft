@@ -4114,3 +4114,10 @@ curves	Smooth	Vloeiend maken
 	Run models on	Modellen uitvoeren op
 	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Startwaarden veranderen het resultaat bij Stable Diffusion-modellen. Laat leeg voor elke keer een nieuwe.
 	The Object Selection Brush found nothing there — paint over more of the object	Het objectselectiepenseel heeft daar niets gevonden — schilder over meer van het object
+
+# AI model device per category, tool names
+	Subtle	Subtiel
+	Run on	Uitvoeren op
+	As above	Zoals hierboven
+	Object Selection Brush Tool	Objectselectiepenseel
+	Generative Enhance Brush Tool	Penseel Generatief verbeteren

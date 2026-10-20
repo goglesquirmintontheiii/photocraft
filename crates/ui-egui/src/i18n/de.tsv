@@ -3357,3 +3357,10 @@ curves	Smooth	Glätten
 	Run models on	Modelle ausführen auf
 	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Startwerte ändern das Ergebnis bei Stable-Diffusion-Modellen. Leer lassen, um jedes Mal einen neuen zu erhalten.
 	The Object Selection Brush found nothing there — paint over more of the object	Der Objektauswahl-Pinsel hat dort nichts gefunden – malen Sie über mehr vom Objekt
+
+# AI model device per category, tool names
+	Subtle	Dezent
+	Run on	Ausführen auf
+	As above	Wie oben
+	Object Selection Brush Tool	Objektauswahl-Pinsel-Werkzeug
+	Generative Enhance Brush Tool	Pinsel „Generatives Verbessern“

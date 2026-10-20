@@ -3963,3 +3963,10 @@ navigator	Zoom	Zvětšení
 	Run models on	Spouštět modely na
 	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Semínko mění výsledek u modelů Stable Diffusion. Nechte pole prázdné, chcete-li pokaždé nový.
 	The Object Selection Brush found nothing there — paint over more of the object	Štětec výběru objektu tam nic nenašel — přemalujte větší část objektu
+
+# AI model device per category, tool names
+	Subtle	Jemné
+	Run on	Spouštět na
+	As above	Stejně jako výše
+	Object Selection Brush Tool	Nástroj štětec výběru objektu
+	Generative Enhance Brush Tool	Nástroj štětec generativního vylepšení

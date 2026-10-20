@@ -4471,3 +4471,10 @@ shape	Appearance	Aspetto
 	Run models on	Esegui i modelli su
 	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	I semi cambiano il risultato con i modelli Stable Diffusion. Lascialo vuoto per averne uno nuovo ogni volta.
 	The Object Selection Brush found nothing there — paint over more of the object	Il Pennello Selezione oggetto non ha trovato nulla lì — dipingi su una parte più ampia dell'oggetto
+
+# AI model device per category, tool names
+	Subtle	Leggero
+	Run on	Esegui su
+	As above	Come sopra
+	Object Selection Brush Tool	Strumento Pennello Selezione oggetto
+	Generative Enhance Brush Tool	Strumento Pennello Miglioramento generativo

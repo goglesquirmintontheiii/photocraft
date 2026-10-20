@@ -110,6 +110,9 @@ impl Manager {
         let store = Store::open(dir)?;
         crate::accounts::load(dir);
         crate::infer::set_device(load_device(dir));
+        for kind in ModelKind::ALL {
+            crate::infer::set_kind_device(kind, load_kind_device(dir, kind));
+        }
         Ok(Manager { inner: Arc::new(Mutex::new(Inner { store, jobs: Vec::new(), next: 1 })) })
     }
 
@@ -120,8 +123,25 @@ impl Manager {
 
     pub fn set_device(&self, d: crate::infer::Device) -> Result<()> {
         crate::infer::set_device(d);
+        self.save_settings()
+    }
+
+    /// Where a category's models run when set apart from [`Manager::device`].
+    pub fn kind_device(&self, kind: ModelKind) -> Option<crate::infer::Device> {
+        crate::infer::kind_device(kind)
+    }
+
+    /// Sets where a category's models run (`None`: as [`Manager::device`]); saved with the models.
+    pub fn set_kind_device(&self, kind: ModelKind, d: Option<crate::infer::Device>) -> Result<()> {
+        crate::infer::set_kind_device(kind, d);
+        self.save_settings()
+    }
+
+    fn save_settings(&self) -> Result<()> {
         let path = self.dir().join(SETTINGS);
-        let text = serde_json::json!({"device": d.id()}).to_string();
+        let kinds: serde_json::Map<String, serde_json::Value> =
+            ModelKind::ALL.into_iter().filter_map(|k| crate::infer::kind_device(k).map(|d| (k.id().to_string(), d.id().into()))).collect();
+        let text = serde_json::json!({"device": crate::infer::device().id(), "kinds": kinds}).to_string();
         std::fs::write(&path, text).map_err(|e| Error::io("Couldn't save the AI settings", e))
     }
 
@@ -616,6 +636,13 @@ fn load_device(dir: &Path) -> crate::infer::Device {
         .unwrap_or_default()
 }
 
+fn load_kind_device(dir: &Path, kind: ModelKind) -> Option<crate::infer::Device> {
+    std::fs::read_to_string(dir.join(SETTINGS))
+        .ok()
+        .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+        .and_then(|v| v.get("kinds").and_then(|k| k.get(kind.id())).and_then(serde_json::Value::as_str).and_then(crate::infer::Device::from_id))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -727,6 +754,22 @@ mod tests {
         assert!(m.import_link("Acly/MobileSAM", &[], None).is_err(), "an import needs a use");
         assert!(m.download("no-such-model").is_err());
         assert!(!dir.join(crate::store::STAGING).exists() || std::fs::read_dir(dir.join(crate::store::STAGING)).unwrap().next().is_none());
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn category_devices_are_saved_and_apply_only_inside_their_category() {
+        let dir = temp("kind-device");
+        let m = Manager::open(&dir).unwrap();
+        m.set_device(crate::infer::Device::Auto).unwrap();
+        m.set_kind_device(ModelKind::Removal, Some(crate::infer::Device::Cpu)).unwrap();
+        assert_eq!(load_kind_device(&dir, ModelKind::Removal), Some(crate::infer::Device::Cpu));
+        assert_eq!(load_kind_device(&dir, ModelKind::Segmentation), None);
+        assert_eq!(load_device(&dir), crate::infer::Device::Auto, "the main choice is kept");
+        assert_eq!(crate::infer::for_kind(ModelKind::Removal, crate::infer::effective_device), crate::infer::Device::Cpu);
+        assert_eq!(crate::infer::for_kind(ModelKind::Inpainting, crate::infer::effective_device), crate::infer::Device::Auto);
+        m.set_kind_device(ModelKind::Removal, None).unwrap();
+        assert_eq!(load_kind_device(&dir, ModelKind::Removal), None);
         let _ = std::fs::remove_dir_all(dir);
     }
 

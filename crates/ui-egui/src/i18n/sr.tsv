@@ -4427,3 +4427,10 @@ shape	Appearance	Izgled
 	Run models on	Pokreći modele na
 	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Seme menja rezultat kod Stable Diffusion modela. Ostavite prazno za novo seme svaki put.
 	The Object Selection Brush found nothing there — paint over more of the object	Četkica za izbor objekta tu nije ništa našla — prebojite veći deo objekta
+
+# AI model device per category, tool names
+	Subtle	Blago
+	Run on	Pokreći na
+	As above	Kao gore
+	Object Selection Brush Tool	Alatka četkica za izbor objekta
+	Generative Enhance Brush Tool	Alatka četkica za generativno poboljšanje

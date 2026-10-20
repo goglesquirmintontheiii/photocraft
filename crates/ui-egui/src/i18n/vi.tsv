@@ -3842,3 +3842,10 @@ curves	Smooth	Làm mượt
 	Run models on	Chạy mô hình trên
 	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Hạt giống chỉ thay đổi kết quả với các mô hình Stable Diffusion. Để trống để có hạt giống mới mỗi lần.
 	The Object Selection Brush found nothing there — paint over more of the object	Cọ Chọn đối tượng không tìm thấy gì ở đó — hãy tô lên nhiều phần hơn của đối tượng
+
+# AI model device per category, tool names
+	Subtle	Nhẹ
+	Run on	Chạy trên
+	As above	Như trên
+	Object Selection Brush Tool	Công cụ Cọ Chọn đối tượng
+	Generative Enhance Brush Tool	Công cụ Cọ Cải thiện tạo sinh

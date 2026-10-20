@@ -1613,10 +1613,16 @@ fn ensure_gpu(app: &mut PhotocraftApp, ctx: &egui::Context, idx: usize, visible:
     };
     let (doc, raw_key) = display_doc(app, idx);
     let (display, _) = canvas_display(app, &doc, None);
+    // Repeated pattern tiles sample the same texture, including pixels outside the unwrapped
+    // viewport. Refresh the affected document region while Pattern Preview is enabled.
+    let blend_visible = if app.ui.view.pattern_preview { doc.bounds() } else { visible };
     // The texture is shared by every display: only what it stores counts, not the monitor.
     let display_key = texture_key(display.as_deref());
     let seen = app.canvases.get(&(id, GPU_OUTPUT)).map(|c| (c.revision, c.preview_key));
     let mut damage = seen.and_then(|seen| damage_since(app, idx, seen, (revision, raw_key), display_key, last_damage));
+    if let Some(region) = damage {
+        damage = Some(crate::blend_preview::clip_damage(app, id, revision, raw_key, region, blend_visible));
+    }
     // To an adjustment dialog's preview: only what the view shows now (the rest as it moves there).
     if damage.is_some()
         && let Some(r) = seen.filter(|s| s.0 == revision).and_then(|s| crate::adjust_preview::switch_region(app, id, revision, s.1 ^ display_key, raw_key))
@@ -1676,7 +1682,12 @@ fn ensure_gpu(app: &mut PhotocraftApp, ctx: &egui::Context, idx: usize, visible:
             let r = gpu.refresh(id.0, &doc, Some(r), display.as_deref());
             app.perf.record_refresh(&r);
         }
-        return true;
+        // Blend previews keep offscreen pixels untouched until the view reaches them.
+        // Use the normal refresh path so CPU fallback and pending redraws stay synchronized.
+        damage = crate::blend_preview::uncovered(app, id, revision, raw_key, blend_visible);
+        if damage.is_none() {
+            return true;
+        }
     }
     // Display textures for a canvas this large would not fit the GPU: the reduced CPU canvas
     // draws it (checked before the memory budget, which walks the history, every frame).
@@ -5051,8 +5062,9 @@ fn draw_drag_preview(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &View
                 Tool::GenerativeInfill | Tool::GenerativeRemoval | Tool::ReflectionRemoval | Tool::GenerativeEnhance => {
                     crate::theme::Tokens::get(painter.ctx()).accent.gamma_multiply(0.45)
                 }
-                // The Object Selection Brush shows its stroke like Quick Selection's.
-                Tool::ObjectSelectionBrush => Color32::from_white_alpha(60),
+                // The Object Selection Brush tints its stroke in the accent colour, more strongly
+                // than the Generative Brushes: a faint white trail was hard to see.
+                Tool::ObjectSelectionBrush => crate::theme::Tokens::get(painter.ctx()).accent.gamma_multiply(0.6),
                 // Photoshop paints the area to heal in half-opaque dark grey; a faint white trail
                 // barely showed on light pixels (#7342).
                 Tool::SpotHealing => Color32::from_black_alpha(128),
@@ -8972,3 +8984,7 @@ mod rotation_preview_isolation_tests {
 #[cfg(test)]
 #[path = "canvas_display_memo_tests.rs"]
 mod display_memo_tests;
+
+#[cfg(test)]
+#[path = "canvas/blend_viewport_tests.rs"]
+mod blend_viewport_regression;

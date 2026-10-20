@@ -2981,3 +2981,10 @@ curves	Smooth	平滑
 	Run models on	运行模型于
 	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	种子仅对 Stable Diffusion 模型的结果有影响。留空则每次使用新种子。
 	The Object Selection Brush found nothing there — paint over more of the object	对象选择画笔在那里没有找到任何内容 — 请涂抹对象的更多部分
+
+# AI model device per category, tool names
+	Subtle	轻微
+	Run on	运行于
+	As above	同上
+	Object Selection Brush Tool	对象选择画笔工具
+	Generative Enhance Brush Tool	生成式增强画笔工具

@@ -3363,3 +3363,10 @@ curves	Smooth	Lisser
 	Run models on	Exécuter les modèles sur
 	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Les graines modifient le résultat avec les modèles Stable Diffusion. Laissez vide pour en obtenir une nouvelle à chaque fois.
 	The Object Selection Brush found nothing there — paint over more of the object	Le Pinceau de sélection d'objet n'a rien trouvé ici — peignez sur une plus grande partie de l'objet
+
+# AI model device per category, tool names
+	Subtle	Subtil
+	Run on	Exécuter sur
+	As above	Comme ci-dessus
+	Object Selection Brush Tool	Outil Pinceau de sélection d'objet
+	Generative Enhance Brush Tool	Outil Pinceau d'amélioration générative

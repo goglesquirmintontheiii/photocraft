@@ -4144,3 +4144,10 @@ layerLabel	No Color	Sem cor
 	Run models on	Executar modelos em
 	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	As sementes mudam o resultado com modelos Stable Diffusion. Deixe vazio para uma nova a cada vez.
 	The Object Selection Brush found nothing there — paint over more of the object	O Pincel de seleção de objeto não encontrou nada aí — pinte sobre uma parte maior do objeto
+
+# AI model device per category, tool names
+	Subtle	Sutil
+	Run on	Executar em
+	As above	Igual ao acima
+	Object Selection Brush Tool	Ferramenta Pincel de seleção de objeto
+	Generative Enhance Brush Tool	Ferramenta Pincel de aprimoramento generativo

@@ -306,6 +306,29 @@ fn recommended_row(ui: &mut Ui, r: &CatalogRow, m: &Manager, error: &mut Option<
     });
 }
 
+/// "Run on" for one category: as the main choice, or a place of its own.
+fn kind_device_row(ui: &mut Ui, kind: ModelKind, m: &Manager, error: &mut Option<String>) {
+    use photocraft_ml::infer::Device;
+    let t = Tokens::get(ui.ctx());
+    ui.horizontal(|ui| {
+        ui.label(RichText::new(tl!("Run on")).size(11.5).color(t.text_dim));
+        let own = m.kind_device(kind);
+        let mut current = own.map_or("main", Device::id).to_string();
+        let mut options: Vec<(String, &str)> = vec![("main".to_string(), tl!("As above"))];
+        options.extend(
+            Device::ALL
+                .into_iter()
+                .filter(|d| cfg!(windows) || *d != Device::Npu || own == Some(Device::Npu))
+                .map(|d| (d.id().to_string(), tl!(d.title()))),
+        );
+        if crate::widgets::dropdown(ui, &format!("ai-device-{}", kind.id()), &mut current, &options, 170.0)
+            && let Err(e) = m.set_kind_device(kind, Device::from_id(&current))
+        {
+            *error = Some(e.to_string());
+        }
+    });
+}
+
 /// The section header: chevron, title and counts. Returns whether the section is open.
 fn header(ui: &mut Ui, kind: ModelKind, installed: usize, recommended: usize, forced_open: bool, st: &mut Map<String, Value>) -> bool {
     let t = Tokens::get(ui.ctx());
@@ -659,6 +682,9 @@ pub(crate) fn body(ui: &mut Ui, f: &mut Map<String, Value>, models: Option<&Mana
         if open {
             ui.indent(("ai-section", kind.id()), |ui| {
                 ui.label(RichText::new(tl!(kind.used_by())).size(11.0).color(t.text_faint));
+                if kind != ModelKind::Other {
+                    kind_device_row(ui, kind, m, &mut error);
+                }
                 ui.add_space(2.0);
                 for model in others {
                     installed_row(ui, model, kind, st, m, &mut error);

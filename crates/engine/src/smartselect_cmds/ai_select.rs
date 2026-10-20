@@ -150,10 +150,93 @@ fn find(
         Ask::Stroke(pts) => Prompt::Points(pts.iter().map(|(x, y)| ([(x - area.x0 as f32) * sx, (y - area.y0 as f32) * sy], true)).collect()),
     };
     let mut report = crate::ai::reporter(ctx, LABEL, 0.0, 0.9);
-    let mask = infer::segment(model, &image, &prompt, &mut report).map_err(crate::ai::error)?;
+    let mut mask = infer::for_kind(photocraft_ml::ModelKind::Segmentation, || infer::segment(model, &image, &prompt, &mut report)).map_err(crate::ai::error)?;
+    if let Prompt::Points(pts) = &prompt {
+        let seeds: Vec<(f32, f32)> = pts.iter().map(|(q, _)| (q[0], q[1])).collect();
+        keep_touching(&mut mask, iw, ih, &seeds);
+    }
     ctx.check()?;
     ctx.progress(0.92, LABEL);
     Ok(to_region(&mask, iw, ih, area))
+}
+
+/// Keeps only the parts of `mask` (0–1, `w`×`h`) that a click or stroke touched: the model can
+/// answer points with several separate objects (most often on small images), and only what was
+/// painted over is meant. The parts' soft edges stay. Unchanged when no seed lands on the mask.
+fn keep_touching(mask: &mut [f32], w: usize, h: usize, seeds: &[(f32, f32)]) {
+    let n = w * h;
+    if mask.len() != n || n == 0 {
+        return;
+    }
+    let on = |i: usize| mask.get(i).is_some_and(|v| *v >= 0.5);
+    let mut kept = vec![false; n];
+    let mut stack = Vec::new();
+    // A seed counts when it is on the mask or within a couple of pixels of it.
+    for (sx, sy) in seeds {
+        if !(sx.is_finite() && sy.is_finite()) {
+            continue;
+        }
+        let (cx, cy) = (sx.round() as i64, sy.round() as i64);
+        for dy in -2..=2i64 {
+            for dx in -2..=2i64 {
+                let (x, y) = (cx + dx, cy + dy);
+                if x < 0 || y < 0 || x >= w as i64 || y >= h as i64 {
+                    continue;
+                }
+                let i = y as usize * w + x as usize;
+                if on(i) && !kept[i] {
+                    kept[i] = true;
+                    stack.push(i);
+                }
+            }
+        }
+    }
+    if stack.is_empty() {
+        return;
+    }
+    while let Some(i) = stack.pop() {
+        let (x, y) = (i % w, i / w);
+        let mut push = |j: usize| {
+            if on(j) && !kept[j] {
+                kept[j] = true;
+                stack.push(j);
+            }
+        };
+        if x > 0 {
+            push(i - 1);
+        }
+        if x + 1 < w {
+            push(i + 1);
+        }
+        if y > 0 {
+            push(i - w);
+        }
+        if y + 1 < h {
+            push(i + w);
+        }
+    }
+    if (0..n).all(|i| kept[i] == on(i)) {
+        return;
+    }
+    // The kept parts grown by their soft edge; everything else goes.
+    const EDGE: usize = 2;
+    let mut near = kept.clone();
+    for _ in 0..EDGE {
+        let prev = near.clone();
+        for i in 0..n {
+            if prev[i] {
+                continue;
+            }
+            let (x, y) = (i % w, i / w);
+            near[i] = (x > 0 && prev[i - 1]) || (x + 1 < w && prev[i + 1]) || (y > 0 && prev[i - w]) || (y + 1 < h && prev[i + w]);
+        }
+    }
+    for (i, v) in mask.iter_mut().enumerate() {
+        let keep = if *v >= 0.5 { kept[i] } else { near[i] };
+        if !keep {
+            *v = 0.0;
+        }
+    }
 }
 
 /// The work-resolution mask (0–1) as a selection over `area`: bilinear up to document pixels,
@@ -260,5 +343,33 @@ mod tests {
         for bad in [json!({}), json!({"rect": "x"}), json!({"point": [f64::MAX, 1]}), json!({"model": 3})] {
             assert!(s.execute("select.aiObject", bad).is_err());
         }
+    }
+
+    /// A stroke over one object keeps only it, even when the model also found another one
+    /// elsewhere; the kept object's soft edge stays.
+    #[test]
+    fn strokes_keep_only_the_objects_they_touch() {
+        let (w, h) = (40, 20);
+        let mut mask = vec![0.0f32; w * h];
+        for y in 5..15 {
+            for x in 2..12 {
+                mask[y * w + x] = 1.0;
+            }
+            for x in 25..35 {
+                mask[y * w + x] = 1.0;
+            }
+            mask[y * w + 12] = 0.3;
+            mask[y * w + 24] = 0.3;
+        }
+        let mut m = mask.clone();
+        keep_touching(&mut m, w, h, &[(5.0, 8.0), (8.0, 10.0)]);
+        assert_eq!(m[10 * w + 5], 1.0);
+        assert_eq!(m[10 * w + 12], 0.3, "the kept object's soft edge stays");
+        assert_eq!(m[10 * w + 30], 0.0, "the object the stroke didn't touch goes");
+        assert_eq!(m[10 * w + 24], 0.0);
+        // A stroke that misses the mask leaves it as the model gave it.
+        let mut m = mask.clone();
+        keep_touching(&mut m, w, h, &[(20.0, 1.0)]);
+        assert_eq!(m, mask);
     }
 }

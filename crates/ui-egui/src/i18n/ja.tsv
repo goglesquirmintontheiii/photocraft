@@ -4031,3 +4031,10 @@ curves	Smooth	スムーズ
 	Run models on	モデルの実行先
 	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	シードで結果が変わるのは Stable Diffusion モデルの場合です。毎回新しいシードにするには空欄のままにします。
 	The Object Selection Brush found nothing there — paint over more of the object	オブジェクト選択ブラシでは何も見つかりませんでした — オブジェクトのより広い範囲をペイントしてください
+
+# AI model device per category, tool names
+	Subtle	控えめ
+	Run on	実行先
+	As above	上と同じ
+	Object Selection Brush Tool	オブジェクト選択ブラシツール
+	Generative Enhance Brush Tool	生成強化ブラシツール

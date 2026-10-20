@@ -224,7 +224,7 @@ fn run_mode(s: &mut Session, p: &Value, mode: Mode) -> Result<Value> {
         _ => label.to_string(),
     };
     let (model, prepare) = crate::ai::resolve_prepared(s, cmd, mode.kind(), p)?;
-    let fill_with = filler(model, job, prepare);
+    let fill_with = filler(model, mode.kind(), job, prepare);
     // Variations are all made from the document as it was before the first was shown.
     let (base, above) = match current(s).filter(|g| preview && g.mode == mode) {
         Some(g) => (g.base.clone(), g.above),

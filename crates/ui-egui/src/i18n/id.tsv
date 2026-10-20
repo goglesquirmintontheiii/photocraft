@@ -3350,3 +3350,10 @@ curves	Smooth	Haluskan
 	Run models on	Jalankan model di
 	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Seed mengubah hasil pada model Stable Diffusion. Kosongkan untuk seed baru setiap kali.
 	The Object Selection Brush found nothing there — paint over more of the object	Kuas Pemilihan Objek tidak menemukan apa pun di sana — lukis lebih banyak bagian objek
+
+# AI model device per category, tool names
+	Subtle	Halus
+	Run on	Jalankan di
+	As above	Sama seperti di atas
+	Object Selection Brush Tool	Alat Kuas Pemilihan Objek
+	Generative Enhance Brush Tool	Alat Kuas Peningkatan Generatif

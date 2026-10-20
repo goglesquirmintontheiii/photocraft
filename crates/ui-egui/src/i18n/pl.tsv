@@ -3953,3 +3953,10 @@ curves	Smooth	Wygładź
 	Run models on	Uruchamiaj modele na
 	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Ziarno zmienia wynik w modelach Stable Diffusion. Zostaw puste, aby za każdym razem użyć nowego.
 	The Object Selection Brush found nothing there — paint over more of the object	Pędzel zaznaczania obiektów nic tam nie znalazł — zamaluj większą część obiektu
+
+# AI model device per category, tool names
+	Subtle	Subtelne
+	Run on	Uruchamiaj na
+	As above	Jak wyżej
+	Object Selection Brush Tool	Narzędzie Pędzel zaznaczania obiektów
+	Generative Enhance Brush Tool	Narzędzie Pędzel ulepszania generatywnego

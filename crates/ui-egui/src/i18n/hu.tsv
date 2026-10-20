@@ -4273,3 +4273,10 @@ cameraRaw	Yellow	Sárga
 	Run models on	Modellek futtatása ezen:
 	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	A kezdőérték a Stable Diffusion modelleknél változtatja meg az eredményt. Hagyja üresen, ha minden alkalommal újat szeretne.
 	The Object Selection Brush found nothing there — paint over more of the object	Az objektumkijelölő ecset nem talált ott semmit — fessen az objektum nagyobb része fölé
+
+# AI model device per category, tool names
+	Subtle	Finom
+	Run on	Futtatás ezen:
+	As above	Mint fent
+	Object Selection Brush Tool	Objektumkijelölő ecset
+	Generative Enhance Brush Tool	Generatív javítás ecset

@@ -4316,3 +4316,10 @@ navigator	Zoom	Zoom
 	Run models on	Ejecutar modelos en
 	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Las semillas cambian el resultado con los modelos de Stable Diffusion. Déjala vacía para obtener una nueva cada vez.
 	The Object Selection Brush found nothing there — paint over more of the object	El Pincel de selección de objetos no encontró nada ahí — pinta sobre una parte mayor del objeto
+
+# AI model device per category, tool names
+	Subtle	Sutil
+	Run on	Ejecutar en
+	As above	Igual que arriba
+	Object Selection Brush Tool	Herramienta Pincel de selección de objetos
+	Generative Enhance Brush Tool	Herramienta Pincel de mejora generativa

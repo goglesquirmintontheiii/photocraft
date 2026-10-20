@@ -3329,3 +3329,10 @@ curves	Smooth	Сгладить
 	Run models on	Запускать модели на
 	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Начальное значение влияет на результат только у моделей Stable Diffusion. Оставьте поле пустым, чтобы каждый раз получать новое.
 	The Object Selection Brush found nothing there — paint over more of the object	Кисть выделения объектов ничего там не нашла — закрасьте бо́льшую часть объекта
+
+# AI model device per category, tool names
+	Subtle	Слабый
+	Run on	Запускать на
+	As above	Как выше
+	Object Selection Brush Tool	Кисть выделения объектов
+	Generative Enhance Brush Tool	Кисть генеративного улучшения

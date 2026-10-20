@@ -2,8 +2,10 @@
 //! of model:
 //!
 //! - a super-resolution network (Real-ESRGAN and the like: an image in, the same image ×2 or ×4
-//!   out). The area is scaled down by the network's factor and back up through it, which redraws
-//!   it with crisp detail. Seeds don't change its result.
+//!   out). The area goes through it at its own resolution (a little smaller when the detail is
+//!   strong) and the larger, crisper result is averaged back down to the area's size, so the
+//!   network's sharp edges are kept and none of the area's own detail is lost. Seeds don't change
+//!   its result.
 //! - a Stable Diffusion pipeline, run lightly (an img2img pass at a low strength with a fixed
 //!   "sharp, detailed" prompt): the picture keeps its shapes and gains texture; each seed gives a
 //!   slightly different result.
@@ -76,22 +78,36 @@ fn probe(net: &dyn super::net::Network) -> Result<(Port, usize, usize)> {
     Ok((port, scale, fixed_w))
 }
 
-/// Scales `img` down by the network's factor and back up through it, in overlapping tiles.
+/// How much smaller the area is made before the network redraws it, for a detail (0–1): the
+/// network sees it at its own resolution up to medium, and slightly smaller when strong, so blur a
+/// few pixels wide reads as low resolution it can redraw. Never by the network's whole factor:
+/// that throws away the detail the area has.
+pub(crate) fn pre_shrink(detail: f32) -> f32 {
+    1.0 + 1.5 * (detail - 0.5).max(0.0)
+}
+
+/// How much of the redrawn result replaces the area, for a detail (0–1).
+pub(crate) fn mix(detail: f32) -> f32 {
+    (0.55 + 0.6 * detail).min(1.0)
+}
+
+/// Redraws `img` larger through the network, in overlapping tiles, and brings each tile back to
+/// the image's size (averaging, which keeps the network's sharp edges).
 fn upscale(loader: &dyn Loader, model: &Model, img: &Image, detail: f32, report: Report<'_>) -> Result<Vec<f32>> {
     let (w, h) = (img.width, img.height);
     step(report, 0.02, "Loading the model…")?;
     let net = load(loader, single(model)?)?;
     let (port, scale, fixed) = probe(net.as_ref())?;
-    // A stronger pass starts from a smaller picture (more is redrawn).
-    let factor = scale as f32 * (0.6 + 0.4 * detail);
-    let (sw, sh) = (((w as f32 / factor).round() as usize).max(8), ((h as f32 / factor).round() as usize).max(8));
-    let small = resize(&img.rgb, w, h, 3, sw, sh);
+    let pre = pre_shrink(detail).min(scale as f32).max(1.0);
+    let (sw, sh) = (((w as f32 / pre).round() as usize).clamp(1, w.max(1)), ((h as f32 / pre).round() as usize).clamp(1, h.max(1)));
+    let small = if (sw, sh) == (w, h) { img.rgb.clone() } else { resize(&img.rgb, w, h, 3, sw, sh) };
     let tile = if fixed > 0 { fixed } else { 192 };
     let overlap = if fixed > 0 { (fixed / 8).max(4) } else { 16 };
     let stride = tile.saturating_sub(overlap * 2).max(8);
-    let (ow, oh) = (sw * scale, sh * scale);
-    let mut acc = vec![0.0f32; ow * oh * 3];
-    let mut weight = vec![0.0f32; ow * oh];
+    // From the small grid to the image's.
+    let (kx, ky) = (w as f64 / sw as f64, h as f64 / sh as f64);
+    let mut acc = vec![0.0f32; w * h * 3];
+    let mut weight = vec![0.0f32; w * h];
     let starts = |len: usize| -> Vec<usize> {
         if len <= tile {
             return vec![0];
@@ -137,23 +153,38 @@ fn upscale(loader: &dyn Loader, model: &Model, img: &Image, detail: f32, report:
                 return Err(Error::Invalid("The model's result has an odd size.".into()));
             }
             let rgb = interleave(&v, rw, rh);
+            // The tile's own part (not the padding), at the image's size.
+            let (cw, chh) = (tw * scale, th * scale);
+            let mut crop = Vec::with_capacity(cw * chh * 3);
+            for y in 0..chh {
+                crop.extend_from_slice(rgb.get((y * rw) * 3..(y * rw + cw) * 3).unwrap_or(&[]));
+            }
+            if crop.len() != cw * chh * 3 {
+                return Err(Error::Invalid("The model's result has an odd size.".into()));
+            }
+            let gx0 = ((x0 as f64 * kx).round() as usize).min(w);
+            let gy0 = ((y0 as f64 * ky).round() as usize).min(h);
+            let gx1 = if x0 + tw >= sw { w } else { (((x0 + tw) as f64 * kx).round() as usize).min(w) };
+            let gy1 = if y0 + th >= sh { h } else { (((y0 + th) as f64 * ky).round() as usize).min(h) };
+            let (gw, gh) = (gx1.saturating_sub(gx0), gy1.saturating_sub(gy0));
+            if gw == 0 || gh == 0 {
+                done += 1;
+                continue;
+            }
+            let back = resize(&crop, cw, chh, 3, gw, gh);
             // Blend the tile in with weights that fade over the overlap.
-            let fade = (overlap * scale) as f32;
-            for y in 0..th * scale {
-                for x in 0..tw * scale {
-                    let (gx, gy) = (x0 * scale + x, y0 * scale + y);
-                    if gx >= ow || gy >= oh {
-                        continue;
-                    }
-                    let edge = |p: usize, len: usize, at_start: bool, at_end: bool| -> f32 {
-                        let a = if at_start { 1.0 } else { ((p as f32 + 0.5) / fade).min(1.0) };
-                        let b = if at_end { 1.0 } else { (((len - p) as f32 - 0.5) / fade).min(1.0) };
-                        a.min(b).max(1e-3)
-                    };
-                    let wgt = edge(x, tw * scale, x0 == 0, x0 + tw >= sw) * edge(y, th * scale, y0 == 0, y0 + th >= sh);
-                    let i = gy * ow + gx;
+            let (fade_x, fade_y) = ((overlap as f64 * kx) as f32, (overlap as f64 * ky) as f32);
+            let edge = |p: usize, len: usize, fade: f32, at_start: bool, at_end: bool| -> f32 {
+                let a = if at_start { 1.0 } else { ((p as f32 + 0.5) / fade.max(1.0)).min(1.0) };
+                let b = if at_end { 1.0 } else { (((len - p) as f32 - 0.5) / fade.max(1.0)).min(1.0) };
+                a.min(b).max(1e-3)
+            };
+            for y in 0..gh {
+                for x in 0..gw {
+                    let wgt = edge(x, gw, fade_x, x0 == 0, x0 + tw >= sw) * edge(y, gh, fade_y, y0 == 0, y0 + th >= sh);
+                    let i = (gy0 + y) * w + gx0 + x;
                     for c in 0..3 {
-                        if let (Some(a), Some(s)) = (acc.get_mut(i * 3 + c), rgb.get((y * rw + x) * 3 + c)) {
+                        if let (Some(a), Some(s)) = (acc.get_mut(i * 3 + c), back.get((y * gw + x) * 3 + c)) {
                             *a += s * wgt;
                         }
                     }
@@ -165,15 +196,18 @@ fn upscale(loader: &dyn Loader, model: &Model, img: &Image, detail: f32, report:
             done += 1;
         }
     }
+    let m = mix(detail);
     for (i, wv) in weight.iter().enumerate() {
         for c in 0..3 {
+            let orig = img.rgb.get(i * 3 + c).copied().unwrap_or(0.0);
             if let Some(a) = acc.get_mut(i * 3 + c) {
-                *a = if *wv > 0.0 { (*a / wv).clamp(0.0, 1.0) } else { 0.0 };
+                let redrawn = if *wv > 0.0 { *a / wv } else { orig };
+                *a = (orig + m * (redrawn - orig)).clamp(0.0, 1.0);
             }
         }
     }
     step(report, 1.0, "")?;
-    Ok(resize(&acc, ow, oh, 3, w, h))
+    Ok(acc)
 }
 
 #[cfg(test)]
@@ -241,6 +275,71 @@ mod tests {
         assert!(parts > 1, "{parts}");
         // Seamless: every pixel got the network's +0.1.
         assert!(out.iter().all(|v| (v - 0.6).abs() < 0.01), "{:?}", out.iter().fold((1f32, 0f32), |(a, b), v| (a.min(*v), b.max(*v))));
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    /// An identity "super-resolution" network (nearest neighbour ×2, nothing added).
+    struct Same2;
+    impl Network for Same2 {
+        fn inputs(&self) -> Vec<Port> {
+            Up2.inputs()
+        }
+        fn outputs(&self) -> Vec<Port> {
+            Vec::new()
+        }
+        fn backend(&self) -> String {
+            "Test".into()
+        }
+        fn run(&self, ins: Vec<(String, Tensor)>) -> Result<Vec<(String, Tensor)>> {
+            let mut out = Up2.run(ins)?;
+            if let Some((_, t)) = out.first_mut() {
+                let v: Vec<f32> = t.to_f32().into_iter().map(|x| x - 0.1).collect();
+                *t = Tensor::f32(&t.shape.clone(), v);
+            }
+            Ok(out)
+        }
+    }
+
+    struct LSame;
+    impl Loader for LSame {
+        fn load(&self, _: &Path) -> Result<Arc<dyn Network>> {
+            Ok(Arc::new(Same2))
+        }
+    }
+
+    /// Passes of a network that adds nothing keep a textured area as it was: the area is never
+    /// made smaller than it is at subtle and medium, so its detail isn't lost (it used to be cut
+    /// to a quarter, and each pass smoothed a brick wall more).
+    #[test]
+    fn passes_keep_the_detail_an_area_has() {
+        let dir = std::env::temp_dir().join(format!("photocraft-enhance-keep-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("same.onnx"), b"x").unwrap();
+        let model = Model { name: "same".into(), files: vec![dir.join("same.onnx")], catalog_id: None };
+        let (w, h) = (300, 260);
+        // A fine checkerboard of "bricks" 3 px wide.
+        let rgb: Vec<f32> = (0..w * h).flat_map(|i| {
+            let v = if ((i % w) / 3 + (i / w) / 3) % 2 == 0 { 0.8 } else { 0.2 };
+            [v, v * 0.6, v * 0.4]
+        }).collect();
+        let contrast = |px: &[f32]| -> f32 {
+            let mut s = 0.0;
+            for y in 0..h {
+                for x in 1..w {
+                    s += (px[(y * w + x) * 3] - px[(y * w + x - 1) * 3]).abs();
+                }
+            }
+            s
+        };
+        let before = contrast(&rgb);
+        let mut img = Image::new(w, h, rgb).unwrap();
+        for _ in 0..3 {
+            let (out, _) = enhance_with(&LSame, &model, &img, &vec![1.0; w * h], &Enhancing { seed: None, detail: 0.5 }, &mut |_, _| true).unwrap();
+            img = Image::new(w, h, out).unwrap();
+        }
+        let after = contrast(&img.rgb);
+        assert!(after > 0.8 * before, "three passes kept {:.0}% of the texture", 100.0 * after / before);
+        assert!(pre_shrink(0.25) == 1.0 && pre_shrink(0.5) == 1.0 && pre_shrink(0.85) < 2.0 && mix(0.85) == 1.0);
         let _ = std::fs::remove_dir_all(dir);
     }
 }

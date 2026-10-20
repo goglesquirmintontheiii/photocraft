@@ -4062,3 +4062,10 @@ curves	Smooth	Згладити
 	Run models on	Запускати моделі на
 	Seeds change the result with Stable Diffusion models. Leave it empty for a new one each time.	Початкове значення впливає на результат лише в моделях Stable Diffusion. Залиште поле порожнім, щоб щоразу отримувати нове.
 	The Object Selection Brush found nothing there — paint over more of the object	Пензель виділення об'єктів нічого там не знайшов — замалюйте більшу частину об'єкта
+
+# AI model device per category, tool names
+	Subtle	Слабкий
+	Run on	Запускати на
+	As above	Як вище
+	Object Selection Brush Tool	Інструмент «Пензель виділення об'єктів»
+	Generative Enhance Brush Tool	Інструмент «Пензель генеративного покращення»

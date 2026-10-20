@@ -96,26 +96,29 @@ pub trait Loader: Send + Sync {
 const KEEP: usize = 6;
 
 struct Cache {
-    nets: Vec<(PathBuf, Arc<dyn Network>)>,
+    /// Each network with the file it came from and where it was placed.
+    nets: Vec<(PathBuf, crate::infer::Device, Arc<dyn Network>)>,
 }
 
 static CACHE: Mutex<Cache> = Mutex::new(Cache { nets: Vec::new() });
 
-/// The network in `path`, loaded once with `loader`.
+/// The network in `path`, loaded once with `loader` for each place it runs (a model used by two
+/// categories set to run in different places is loaded for each).
 pub fn cached(loader: &dyn Loader, path: &Path) -> Result<Arc<dyn Network>> {
+    let device = crate::infer::effective_device();
     {
         let mut c = CACHE.lock().unwrap_or_else(PoisonError::into_inner);
-        if let Some(i) = c.nets.iter().position(|(p, _)| p == path) {
+        if let Some(i) = c.nets.iter().position(|(p, d, _)| p == path && *d == device) {
             let hit = c.nets.remove(i);
-            let net = hit.1.clone();
+            let net = hit.2.clone();
             c.nets.push(hit);
             return Ok(net);
         }
     }
     let net = loader.load(path)?;
     let mut c = CACHE.lock().unwrap_or_else(PoisonError::into_inner);
-    c.nets.retain(|(p, _)| p != path);
-    c.nets.push((path.to_path_buf(), net.clone()));
+    c.nets.retain(|(p, d, _)| !(p == path && *d == device));
+    c.nets.push((path.to_path_buf(), device, net.clone()));
     while c.nets.len() > KEEP {
         c.nets.remove(0);
     }
@@ -129,12 +132,12 @@ pub fn clear_cache() {
 
 /// Forgets the networks loaded from files under `dir` (a model's folder).
 pub fn forget(dir: &Path) {
-    CACHE.lock().unwrap_or_else(PoisonError::into_inner).nets.retain(|(p, _)| !p.starts_with(dir));
+    CACHE.lock().unwrap_or_else(PoisonError::into_inner).nets.retain(|(p, _, _)| !p.starts_with(dir));
 }
 
 /// Forgets the loaded networks whose file `drop` picks (another diffusion pipeline's parts).
 pub fn forget_where(drop: impl Fn(&Path) -> bool) {
-    CACHE.lock().unwrap_or_else(PoisonError::into_inner).nets.retain(|(p, _)| !drop(p));
+    CACHE.lock().unwrap_or_else(PoisonError::into_inner).nets.retain(|(p, _, _)| !drop(p));
 }
 
 /// The ONNX Runtime loader for this build.
@@ -201,7 +204,7 @@ mod ort_impl {
     fn providers() -> Vec<(&'static str, ExecutionProviderDispatch)> {
         #[allow(unused_mut)]
         let mut v: Vec<(&'static str, ExecutionProviderDispatch)> = Vec::new();
-        let device = crate::infer::device();
+        let device = crate::infer::effective_device();
         if device == crate::infer::Device::Cpu {
             return v;
         }
