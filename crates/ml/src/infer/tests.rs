@@ -127,6 +127,45 @@ fn lama_style_models_get_0_to_1_planes_and_give_back_0_to_255() {
 }
 
 #[test]
+fn a_four_channel_browser_export_gets_the_hole_zeroed_and_the_mask_appended() {
+    // g-ronimo's exports (lama_512_fp16.onnx and friends): one [1,4,H,W] input, the image in
+    // 0–1 with the hole blanked, then the mask (1 = hole) as the fourth channel.
+    let concat: Arc<dyn Network> = Arc::new(Fake {
+        inputs: vec![port("input", Elem::F32, &[1, 4, 512, 512])],
+        outputs: vec![port("output", Elem::F32, &[1, 3, 512, 512])],
+        f: Box::new(|ins| {
+            let t = input(ins, "input").to_f32();
+            let plane = 512 * 512;
+            assert_eq!(t.len(), 4 * plane, "three colour planes and the mask");
+            let mask = &t[3 * plane..4 * plane];
+            assert!(mask.iter().all(|v| *v == 0.0 || *v == 1.0) && mask.contains(&1.0), "the mask is the fourth channel");
+            for c in 0..3 {
+                for (v, m) in t[c * plane..(c + 1) * plane].iter().zip(mask) {
+                    assert!(*m <= 0.5 || *v == 0.0, "the network is shown nothing of the hole (channel {c})");
+                }
+            }
+            // White in the hole, the input back outside it, on the 0–1 scale (planar, as a
+            // network returns it).
+            let out: Vec<f32> = (0..3).flat_map(|_| mask.iter().map(|m| if *m > 0.5 { 1.0 } else { 0.2 })).collect();
+            vec![("output".into(), Tensor::f32(&[1, 3, 512, 512], out))]
+        }),
+        runs: Arc::new(AtomicUsize::new(0)),
+    });
+    let model = temp_model("lama-concat", &["lama_512_fp16.onnx"]);
+    let img = gray(64, 40, 0.2);
+    let mut hole = vec![0.0f32; 64 * 40];
+    for y in 10..30 {
+        for x in 20..40 {
+            hole[y * 64 + x] = 1.0;
+        }
+    }
+    let out = inpaint_with(&Fakes(vec![("lama_512_fp16.onnx", concat)]), &model, &img, &hole, &mut go).unwrap();
+    assert_eq!(out.len(), 64 * 40 * 3);
+    assert!(out[(20 * 64 + 30) * 3] > 0.9, "the hole is filled");
+    assert!((out[(2 * 64 + 2) * 3] - 0.2).abs() < 0.02, "the rest comes back as it was");
+}
+
+#[test]
 fn migan_gets_8_bit_and_a_keep_mask() {
     let migan: Arc<dyn Network> = Arc::new(Fake {
         inputs: vec![port("image", Elem::U8, &[1, 3, -1, -1]), port("mask", Elem::U8, &[1, 1, -1, -1])],
