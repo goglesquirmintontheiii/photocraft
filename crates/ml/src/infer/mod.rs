@@ -603,6 +603,9 @@ enum Fill {
     Migan { image: Port, mask: Port },
     /// One image in, the corrected image out (used inside the hole).
     ImageToImage { image: Port },
+    /// A browser-style export: one `[1,4,H,W]` input — the image in 0–1 with the hole zeroed,
+    /// then the mask (1 = hole) as its fourth channel; output is the whole image in 0–1.
+    LamaConcat { input: Port },
 }
 
 fn fill_kind(ins: &[Port]) -> Result<Fill> {
@@ -612,6 +615,8 @@ fn fill_kind(ins: &[Port]) -> Result<Fill> {
     match (image, mask) {
         (Some(i), Some(m)) if i.elem == Elem::U8 => Ok(Fill::Migan { image: (*i).clone(), mask: (*m).clone() }),
         (Some(i), Some(m)) => Ok(Fill::Lama { image: (*i).clone(), mask: (*m).clone() }),
+        // One input carrying both: image and mask concatenated as four channels.
+        (Some(i), None) if four.len() == 1 && i.shape.get(1) == Some(&4) => Ok(Fill::LamaConcat { input: (*i).clone() }),
         (Some(i), None) if four.len() == 1 => Ok(Fill::ImageToImage { image: (*i).clone() }),
         _ => Err(Error::Unsupported("This model's inputs aren't an image and a mask, so it can't fill.".into())),
     }
@@ -621,6 +626,13 @@ fn fill_kind(ins: &[Port]) -> Result<Fill> {
 /// caller blends it in with the hole as the mask).
 pub fn inpaint(model: &Model, img: &Image, hole: &[f32], report: Report<'_>) -> Result<Vec<f32>> {
     inpaint_with(net::runtime(), model, img, hole, report)
+}
+
+/// Loads `model`'s network into the cache without running it, so its first real use doesn't pay
+/// for building the session (seconds on a GPU). Touches no image and no document: meant for a
+/// worker thread at startup. Doing it twice costs a cache lookup.
+pub fn warm(model: &Model) -> Result<()> {
+    load(net::runtime(), single(model)?).map(|_| ())
 }
 
 pub fn inpaint_with(loader: &dyn Loader, model: &Model, img: &Image, hole: &[f32], report: Report<'_>) -> Result<Vec<f32>> {
@@ -653,6 +665,31 @@ pub fn inpaint_with(loader: &dyn Loader, model: &Model, img: &Image, hole: &[f32
                 (image.name.clone(), Tensor::f32(&[1, 3, ih as i64, iw as i64], planar(&px, iw, ih, 1.0, [0.0; 3], [1.0; 3]))),
                 (mask.name.clone(), Tensor::f32(&[1, 1, ih as i64, iw as i64], m)),
             ])?;
+            let t =
+                out.into_iter().map(|(_, t)| t).find(|t| t.len() == iw * ih * 3).ok_or_else(|| Error::Invalid("The model's result has an odd size.".into()))?;
+            let mut v = t.to_f32();
+            if v.iter().any(|x| *x > 1.5) {
+                v.iter_mut().for_each(|x| *x /= 255.0);
+            }
+            resize(&interleave(&v, iw, ih), iw, ih, 3, w, h)
+        }
+        Fill::LamaConcat { input } => {
+            let (iw, ih) = spatial(input, 512);
+            let px = resize(&img.rgb, w, h, 3, iw, ih);
+            let m: Vec<f32> = resize(hole, w, h, 1, iw, ih).into_iter().map(|v| if v > 0.01 { 1.0 } else { 0.0 }).collect();
+            // The network is shown nothing of the hole — `img * (1 - mask)`, as LaMa's own
+            // inference does it — and gets the mask as a fourth channel after the three colours.
+            let mut data = planar(&px, iw, ih, 1.0, [0.0; 3], [1.0; 3]);
+            let plane = iw.saturating_mul(ih);
+            if plane > 0 {
+                for (i, v) in data.iter_mut().enumerate() {
+                    if let Some(k) = m.get(i % plane) {
+                        *v *= 1.0 - k;
+                    }
+                }
+            }
+            data.extend_from_slice(&m);
+            let out = n.run(vec![(input.name.clone(), Tensor::f32(&[1, 4, ih as i64, iw as i64], data))])?;
             let t =
                 out.into_iter().map(|(_, t)| t).find(|t| t.len() == iw * ih * 3).ok_or_else(|| Error::Invalid("The model's result has an odd size.".into()))?;
             let mut v = t.to_f32();

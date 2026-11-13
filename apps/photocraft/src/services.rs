@@ -633,7 +633,13 @@ pub fn native(automation: Option<photocraft_automation::AuthorizedWorkspace>) ->
 /// the preferences and presets (and inside `PhotoCraftData` for a portable copy).
 fn models_manager() -> Option<photocraft_ml::Manager> {
     let dir = config_dir()?.join("Models");
-    photocraft_ml::Manager::open(&dir).map_err(|e| log::warn!("AI models unavailable: {e}")).ok()
+    let manager = photocraft_ml::Manager::open(&dir).map_err(|e| log::warn!("AI models unavailable: {e}")).ok()?;
+    // Build the removal network's session now, on a worker thread: the first removal would
+    // otherwise wait seconds for it (a CUDA session takes about ten). It runs ahead of the first
+    // use, never blocks the window, and a failure only costs the warm-up.
+    let warm = manager.clone();
+    std::thread::spawn(move || photocraft_ml::warm_best(&warm, photocraft_ml::ModelKind::Removal));
+    Some(manager)
 }
 
 /// Preferences ▸ General ▸ Beep When Done: the platform's default information beep.

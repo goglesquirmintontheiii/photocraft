@@ -79,6 +79,42 @@ pub fn available(installed: &[InstalledModel], kind: ModelKind) -> Vec<Installed
     out
 }
 
+/// Builds the runtime session for the first enabled model of `kind` ahead of its first use:
+/// without it the first removal waits for the session (about ten seconds for CUDA), which reads
+/// as the tool hanging. Best effort, meant for a worker thread — a failure only costs the warm-up,
+/// and the tools report the real error when they run.
+pub fn warm_best(manager: &Manager, kind: ModelKind) {
+    let Some(chosen) = manager.available(kind).into_iter().next() else { return };
+    let Some(files) = manager.files_of(&chosen.id) else { return };
+    let model = infer::Model { name: chosen.name, files, catalog_id: chosen.catalog_id };
+    match infer::warm(&model) {
+        Ok(()) => {
+            log::info!("AI: {} is ready to run ({})", model.name, infer::last_backend().unwrap_or_else(|| "unknown".into()));
+            // Loading the session is most of the wait, but the first run also allocates the
+            // runtime's device memory and its kernels: fill one blank frame now so the first
+            // stroke doesn't pay for it. An empty hole would be refused, so this one is small.
+            if kind == ModelKind::Removal {
+                const SIDE: usize = 512;
+                let mut hole = vec![0.0f32; SIDE * SIDE];
+                for y in 248..264 {
+                    for x in 248..264 {
+                        if let Some(v) = hole.get_mut(y * SIDE + x) {
+                            *v = 1.0;
+                        }
+                    }
+                }
+                if let Ok(image) = infer::Image::new(SIDE, SIDE, vec![0.5; SIDE * SIDE * 3]) {
+                    match infer::inpaint(&model, &image, &hole, &mut |_, _| true) {
+                        Ok(_) => log::info!("AI: warm-up frame done ({})", model.name),
+                        Err(e) => log::warn!("AI: warm-up frame failed: {e}"),
+                    }
+                }
+            }
+        }
+        Err(e) => log::warn!("AI: couldn't preload {}: {e}", model.name),
+    }
+}
+
 /// "1.7 GB", "312 MB", "48 KB": sizes as the AI tab shows them (decimal units, as file
 /// managers on Linux and macOS do).
 pub fn format_size(bytes: u64) -> String {
